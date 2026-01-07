@@ -21,7 +21,6 @@
         body { 
             font-family: 'Inter', sans-serif;
             margin: 0; 
-            /* FIX 1: Gunakan dvh (dynamic viewport) untuk HP */
             height: 100vh; height: 100dvh; 
             overflow: hidden; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -29,7 +28,7 @@
             user-select: none; -webkit-user-select: none;
         }
 
-        /* --- 1. RECEIVER UI (TAMPILAN PENONTON) --- */
+        /* --- 1. RECEIVER UI --- */
         #receiver-ui {
             display: flex; flex-direction: column; gap: 15px; 
             width: 80%; max-width: 300px;
@@ -44,22 +43,20 @@
         }
         .btn-recv:active { background-color: #e2e6ea; transform: scale(0.98); }
 
-        /* FOOTER RAHASIA */
         .secret-footer {
-            position: absolute; bottom: 30px; 
-            font-size: 12px; font-weight: bold; color: #adb5bd; 
+            position: absolute; bottom: 45px; 
+            font-size: 11px; font-weight: bold; color: #ced4da; 
             cursor: pointer; letter-spacing: 1px;
-            padding: 20px; z-index: 9999; 
-            opacity: 0.5; transition: 0.3s;
+            padding: 25px; z-index: 99999; 
+            opacity: 0.4; transition: 0.3s;
         }
         .secret-footer:active { opacity: 1; color: #000; }
 
-        /* --- 2. REMOTE UI (IJP MENTALISM) --- */
+        /* --- 2. REMOTE UI --- */
         #remote-ui {
             display: none; width: 100%; height: 100%; 
             background-color: #121212; color: #e0e0e0;
             flex-direction: column; 
-            /* FIX 2: Padding bawah besar agar tidak tertutup menu browser HP */
             padding: 25px 20px 100px 20px; 
             overflow-y: auto;
             z-index: 100;
@@ -101,6 +98,7 @@
         
         .mic-status { margin-top: 15px; font-size: 11px; color: #666; font-weight: 500; letter-spacing: 0.5px;}
         .status-on { color: #00d2ff; text-shadow: 0 0 10px rgba(0,210,255,0.5); }
+        .status-wait { color: #ffcc00; text-shadow: 0 0 10px rgba(255, 204, 0, 0.5); }
 
         .settings-grid {
             display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; width: 100%;
@@ -129,7 +127,7 @@
             text-transform: uppercase; margin-bottom: 8px; margin-left: 5px;
         }
         .config-group { display: flex; flex-direction: column; margin-bottom: 20px; flex-shrink: 0; width: 100%; }
-        .dual-input { display: flex; gap: 10px; width: 100%; }
+        .dual-input { display: flex; gap: 10px; width: 100%; align-items: center;}
         
         .inp-config {
             flex: 1; min-width: 0;
@@ -138,37 +136,32 @@
             text-align: center; font-size: 14px; font-weight: 500; transition: 0.2s; width: 100%;
         }
         .inp-config:focus { border-color: #444; background: #222; }
-        .inp-config::placeholder { color: #444; }
         
         select.inp-config {
             -webkit-appearance: none; appearance: none;
-            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23444444%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23444444%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%0-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
             background-repeat: no-repeat; background-position: right .7em top 50%; background-size: .65em auto;
         }
 
-        .btn-reset {
-            width: 100%; background: #2c1a1a; color: #ff6b6b; border: 1px solid #4a2c2c;
-            padding: 15px; border-radius: 10px; font-weight: 600; margin-bottom: 15px; flex-shrink: 0;
-            font-size: 13px; letter-spacing: 0.5px; transition: 0.2s;
+        .btn-manual {
+            background: #00d2ff; color: #000; border: none;
+            padding: 12px 20px; border-radius: 10px; font-weight: 800;
+            cursor: pointer; transition: 0.2s; font-size: 12px;
         }
-        .btn-reset:active { background: #3d2424; }
+        .btn-manual:active { transform: scale(0.95); opacity: 0.8; }
 
         #console-log {
-            height: 30px; line-height: 30px; flex-shrink: 0;
-            background: #111; /* Latar belakang sedikit lebih terang dari hitam pekat */
-            border-top: 1px solid #333; 
-            padding: 0 10px; 
-            font-size: 12px; font-family: monospace;
+            height: 35px; line-height: 35px; flex-shrink: 0;
+            background: #111; border-top: 1px solid #333; 
+            padding: 0 15px; font-size: 16px; font-family: 'Inter', sans-serif;
             overflow: hidden; white-space: nowrap; 
-            margin-top: auto; text-align: left; width: 100%;
+            margin-top: auto; text-align: center; width: 100%;
         }
-        /* FIX 3: Warna diperjelas (Cyan & Putih Terang) */
-        .log-match { color: #00d2ff; font-weight: bold; } 
-        .log-sys { color: #ddd; font-style: italic; } /* Warna dibuat lebih terang */
+        .log-txt { color: #00d2ff; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; } 
 
         #fake-screen {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: black; z-index: 99999; cursor: pointer;
+            background-color: black; z-index: 999999; cursor: pointer;
         }
     </style>
 </head>
@@ -184,7 +177,7 @@
         </div>
     </div>
     
-    <div class="secret-footer" onclick="ketukRahasia()">ver 13.2</div>
+    <div class="secret-footer" onclick="ketukRahasia()">system v14.4</div>
 
     <div id="remote-ui">
         <div class="rem-header">
@@ -227,21 +220,43 @@
         <div class="config-group">
             <div class="config-label">Prediction Mode</div>
             <select id="text-mode" class="inp-config">
-                <option value="normal">Normal (e.g. Gajah)</option>
-                <option value="reverse">Reverse (e.g. hajag)</option>
-                <option value="alay">Alay (e.g. G4j4h)</option>
+                <option value="normal">Normal</option>
+                <option value="reverse">Reverse</option>
+                <option value="alay">Alay</option>
             </select>
         </div>
 
-        <button class="btn-reset" onclick="resetDB()">RESET DATABASE</button>
+        <div class="config-group">
+            <div class="config-label">Success Delay (Sync Mic)</div>
+            <div class="dual-input">
+                <label class="toggle-switch" style="margin-right: 10px; flex-shrink: 0;">
+                    <input type="checkbox" id="delay-check" onchange="toggleDelayInput()">
+                    <span class="slider"></span>
+                </label>
+                <input type="number" id="delay-val" class="inp-config" value="5" placeholder="Sec" disabled style="opacity: 0.3;">
+            </div>
+        </div>
 
-        <div id="console-log">> System Ready...</div>
+        <div class="config-group">
+            <div class="config-label">Manual Prediksi</div>
+            <div class="dual-input">
+                <input type="text" id="manual-input" class="inp-config" placeholder="Ketik prediksi..." style="text-align: left;">
+                <button class="btn-manual" onclick="kirimManual()">KIRIM</button>
+            </div>
+        </div>
+
+        <div id="console-log"></div> 
     </div>
 
     <script>
         const REST_API = "https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app/prediksi.json";
         const firebaseConfig = { databaseURL: "https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app/" };
         try { firebase.initializeApp(firebaseConfig); } catch(e){}
+
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('remote')) bukaRemote();
+        };
 
         let tapCount = 0;
         let tapTimer;
@@ -277,16 +292,12 @@
 
         function hidupkanFakeScreen() {
             document.getElementById('fake-screen').style.display = 'block';
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().catch((e)=>{});
-            }
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch((e)=>{});
         }
 
         function matikanFakeScreen() {
             document.getElementById('fake-screen').style.display = 'none';
-            if (document.exitFullscreen) {
-                document.exitFullscreen().catch((e)=>{});
-            }
+            if (document.exitFullscreen) document.exitFullscreen().catch((e)=>{});
         }
 
         function ketukFakeScreen() {
@@ -302,16 +313,11 @@
 
         const consoleDiv = document.getElementById('console-log');
         
-        function log(msg, type='sys') {
+        function updateLog(msg) {
             consoleDiv.innerHTML = "";
             let span = document.createElement('span');
-            if(type==='match') {
-                span.className = 'log-match';
-                span.innerText = "SENT: " + msg;
-            } else {
-                span.className = 'log-sys';
-                span.innerText = "> " + msg;
-            }
+            span.className = 'log-txt';
+            span.innerText = msg;
             consoleDiv.appendChild(span);
         }
 
@@ -322,6 +328,16 @@
             } catch(e) {}
         }
 
+        function kirimManual() {
+            const val = document.getElementById('manual-input').value.trim();
+            if (val) {
+                updateLog(val);
+                kirim(val);
+                triggerStrongVibration();
+                document.getElementById('manual-input').value = "";
+            }
+        }
+
         function triggerStrongVibration() {
             let isVibeOn = document.getElementById('vibe-check').checked;
             if (isVibeOn && navigator.vibrate) {
@@ -329,17 +345,22 @@
             }
         }
 
-        async function resetDB() {
-            try {
-                log("Resetting Database...", 'sys');
-                await fetch(REST_API, { method: 'PUT', body: JSON.stringify(null) });
-                if(navigator.vibrate) navigator.vibrate(50);
-            } catch(e) {}
+        function triggerReadyVibration() {
+            let isVibeOn = document.getElementById('vibe-check').checked;
+            if (isVibeOn && navigator.vibrate) navigator.vibrate(800); 
+        }
+
+        function toggleDelayInput() {
+            let isChecked = document.getElementById('delay-check').checked;
+            let input = document.getElementById('delay-val');
+            input.disabled = !isChecked;
+            input.style.opacity = isChecked ? "1" : "0.3";
         }
 
         let recognition;
         let isMicOn = false;
         let ignoreEnd = false;
+        let isPaused = false; 
         
         if ('webkitSpeechRecognition' in window) {
             recognition = new webkitSpeechRecognition();
@@ -353,36 +374,32 @@
                     statusTxt.innerText = "LISTENING...";
                     statusTxt.classList.add('status-on');
                     document.getElementById('mic-btn').classList.add('mic-active');
-                    document.getElementById('mic-btn').innerHTML = '<i class="fa fa-microphone-lines"></i>';
                 }
                 isMicOn = true;
                 ignoreEnd = false; 
                 let isPocketMode = document.getElementById('pocket-check').checked;
-                if(isPocketMode && document.getElementById('fake-screen').style.display === 'none') {
-                    hidupkanFakeScreen();
-                }
+                if(isPocketMode && document.getElementById('fake-screen').style.display === 'none') hidupkanFakeScreen();
             };
 
             recognition.onend = function() {
-                if(isMicOn) {
+                if(isMicOn && !isPaused) {
                     ignoreEnd = true; 
-                    setTimeout(() => {
-                        try { recognition.start(); } catch(e){ isMicOn=false; }
-                    }, 400);
-                } else {
+                    setTimeout(() => { try { recognition.start(); } catch(e){ isMicOn=false; } }, 400);
+                } else if (!isPaused) {
                     let statusTxt = document.getElementById('mic-status-txt');
                     statusTxt.innerText = "Tap to Start Listening";
                     statusTxt.classList.remove('status-on');
                     document.getElementById('mic-btn').classList.remove('mic-active');
-                    document.getElementById('mic-btn').innerHTML = '<i class="fa fa-microphone"></i>';
                 }
             };
             
             recognition.onerror = function(event) {
-                if(event.error == 'no-speech') ignoreEnd = true;
+                if(event.error == 'no-speech' && !isPaused) ignoreEnd = true;
             };
 
             recognition.onresult = function(event) {
+                if(isPaused) return; 
+
                 let transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
                 let startKey = document.getElementById('key-start').value.toLowerCase().trim();
                 let endKey = document.getElementById('key-end').value.toLowerCase().trim();
@@ -396,52 +413,55 @@
                         let rawPrediction = transcript.substring(cutStart, endIndex).trim();
 
                         if (rawPrediction.length > 0) {
-                            
-                            // LOGIKA OUTPUT (3 MODE)
                             let mode = document.getElementById('text-mode').value;
                             let finalData = rawPrediction;
                             
-                            if (mode === 'reverse') {
-                                finalData = rawPrediction.toLowerCase().split('').reverse().join('');
-                            } 
-                            else if (mode === 'alay') {
-                                finalData = rawPrediction.toLowerCase()
-                                    .replace(/a/g, '4')
-                                    .replace(/e/g, '3')
-                                    .replace(/i/g, '1')
-                                    .replace(/o/g, '0')
-                                    .replace(/s/g, '5');
-                            }
+                            if (mode === 'reverse') finalData = rawPrediction.toLowerCase().split('').reverse().join('');
+                            else if (mode === 'alay') finalData = rawPrediction.toLowerCase().replace(/a/g,'4').replace(/e/g,'3').replace(/i/g,'1').replace(/o/g,'0').replace(/s/g,'5');
 
-                            log(finalData, 'match');
+                            updateLog(finalData); 
                             kirim(finalData);
                             triggerStrongVibration();
+
+                            let useDelay = document.getElementById('delay-check').checked;
+                            if(useDelay) {
+                                let seconds = parseInt(document.getElementById('delay-val').value) || 0;
+                                if(seconds > 0) {
+                                    isPaused = true;
+                                    let statusTxt = document.getElementById('mic-status-txt');
+                                    statusTxt.innerText = "PAUSED (" + seconds + "s)...";
+                                    statusTxt.classList.remove('status-on');
+                                    statusTxt.classList.add('status-wait');
+                                    document.getElementById('mic-btn').classList.remove('mic-active');
+                                    document.getElementById('mic-btn').style.opacity = "0.5";
+                                    recognition.stop();
+                                    setTimeout(() => {
+                                        isPaused = false;
+                                        triggerReadyVibration();
+                                        try { recognition.start(); } catch(e){}
+                                        statusTxt.innerText = "LISTENING...";
+                                        statusTxt.classList.remove('status-wait');
+                                        statusTxt.classList.add('status-on');
+                                        document.getElementById('mic-btn').style.opacity = "1";
+                                        document.getElementById('mic-btn').classList.add('mic-active');
+                                    }, seconds * 1000);
+                                }
+                            }
                         }
                     } 
                 }
-                if (transcript.includes("reset database")) resetDB();
             };
         }
 
         function toggleMic() {
             if(!recognition) return alert("Browser tidak support");
-            if(isMicOn) {
-                isMicOn = false;
-                recognition.stop();
-                matikanFakeScreen(); 
-            } else {
-                isMicOn = true;
-                recognition.start();
-            }
+            if(isMicOn) { isMicOn = false; recognition.stop(); matikanFakeScreen(); } 
+            else { isMicOn = true; recognition.start(); }
         }
         
-        function matikanMic() {
-            if(isMicOn) {
-                isMicOn = false;
-                recognition.stop();
-            }
-        }
+        function matikanMic() { if(isMicOn) { isMicOn = false; recognition.stop(); } }
 
+        // RECEIVER LOGIC
         let targetMode = 'web';
         let isWaiting = false;
         let hasRedirected = false;
@@ -449,20 +469,14 @@
         try {
             const db = firebase.database().ref('prediksi');
             db.on('value', (snapshot) => {
-                if (isWaiting && !document.getElementById('receiver-ui').style.display.includes('none')) {
-                    eksekusiRedirect(snapshot.val());
-                }
+                if (isWaiting && !document.getElementById('remote-ui').style.display.includes('flex')) eksekusiRedirect(snapshot.val());
             });
         } catch(e) {}
 
-        document.addEventListener("visibilitychange", () => {
-            if (document.visibilityState === 'visible') triggerBurstMode();
-        });
+        document.addEventListener("visibilitychange", () => { if (document.visibilityState === 'visible') triggerBurstMode(); });
 
         function siapkan(mode) {
-            targetMode = mode;
-            isWaiting = true;
-            hasRedirected = false;
+            targetMode = mode; isWaiting = true; hasRedirected = false;
             document.getElementById('receiver-ui').style.display = 'none';
             document.querySelector('.secret-footer').style.display = 'none';
             fetch(REST_API, { method: 'PUT', body: JSON.stringify(null) }).catch(()=>{});
@@ -474,7 +488,6 @@
             hasRedirected = true; 
             let finalUrl = "";
             let enc = encodeURIComponent(data);
-
             if (data === "autodraw") finalUrl = "https://www.autodraw.com/";
             else if (data.indexOf("calc:") === 0) finalUrl = "https://www.google.com/search?q=" + data.split(":")[1];
             else if (data.indexOf("timer:") === 0) finalUrl = "https://www.google.com/search?q=timer";
@@ -499,17 +512,10 @@
             if (!isWaiting || hasRedirected) return;
             cekCepat();
             let count = 0;
-            let interval = setInterval(() => {
-                if(hasRedirected || count > 20) clearInterval(interval);
-                else { cekCepat(); count++; }
-            }, 150);
+            let interval = setInterval(() => { if(hasRedirected || count > 20) clearInterval(interval); else { cekCepat(); count++; } }, 150);
         }
 
-        function mulaiPollingAktif() {
-            setInterval(() => {
-                if(isWaiting && !hasRedirected) cekCepat();
-            }, 1000);
-        }
+        function mulaiPollingAktif() { setInterval(() => { if(isWaiting && !hasRedirected) cekCepat(); }, 1000); }
     </script>
 </body>
 </html>
