@@ -20,7 +20,10 @@
         
         body { 
             font-family: 'Inter', sans-serif;
-            margin: 0; overflow: hidden; height: 100vh;
+            margin: 0; 
+            /* FIX 1: Gunakan dvh (dynamic viewport) untuk HP */
+            height: 100vh; height: 100dvh; 
+            overflow: hidden; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             background-color: white; transition: background 0.3s;
             user-select: none; -webkit-user-select: none;
@@ -30,6 +33,7 @@
         #receiver-ui {
             display: flex; flex-direction: column; gap: 15px; 
             width: 80%; max-width: 300px;
+            z-index: 1;
         }
         
         .btn-recv { 
@@ -40,16 +44,25 @@
         }
         .btn-recv:active { background-color: #e2e6ea; transform: scale(0.98); }
 
+        /* FOOTER RAHASIA */
         .secret-footer {
-            position: absolute; bottom: 20px; 
-            font-size: 10px; color: #ced4da; cursor: pointer; letter-spacing: 1px;
+            position: absolute; bottom: 30px; 
+            font-size: 12px; font-weight: bold; color: #adb5bd; 
+            cursor: pointer; letter-spacing: 1px;
+            padding: 20px; z-index: 9999; 
+            opacity: 0.5; transition: 0.3s;
         }
+        .secret-footer:active { opacity: 1; color: #000; }
 
         /* --- 2. REMOTE UI (IJP MENTALISM) --- */
         #remote-ui {
             display: none; width: 100%; height: 100%; 
             background-color: #121212; color: #e0e0e0;
-            flex-direction: column; padding: 25px 20px; overflow-y: auto;
+            flex-direction: column; 
+            /* FIX 2: Padding bawah besar agar tidak tertutup menu browser HP */
+            padding: 25px 20px 100px 20px; 
+            overflow-y: auto;
+            z-index: 100;
         }
 
         .rem-header {
@@ -142,17 +155,20 @@
 
         #console-log {
             height: 30px; line-height: 30px; flex-shrink: 0;
-            background: transparent; border-top: 1px solid #222; 
-            padding: 0 5px; font-size: 11px; color: #555; font-family: monospace;
+            background: #111; /* Latar belakang sedikit lebih terang dari hitam pekat */
+            border-top: 1px solid #333; 
+            padding: 0 10px; 
+            font-size: 12px; font-family: monospace;
             overflow: hidden; white-space: nowrap; 
             margin-top: auto; text-align: left; width: 100%;
         }
+        /* FIX 3: Warna diperjelas (Cyan & Putih Terang) */
         .log-match { color: #00d2ff; font-weight: bold; } 
-        .log-sys { color: #444; font-style: italic; } 
+        .log-sys { color: #ddd; font-style: italic; } /* Warna dibuat lebih terang */
 
         #fake-screen {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: black; z-index: 9999; cursor: pointer;
+            background-color: black; z-index: 99999; cursor: pointer;
         }
     </style>
 </head>
@@ -168,7 +184,7 @@
         </div>
     </div>
     
-    <div class="secret-footer" onclick="ketukRahasia()">system 1.0</div>
+    <div class="secret-footer" onclick="ketukRahasia()">ver 13.2</div>
 
     <div id="remote-ui">
         <div class="rem-header">
@@ -386,11 +402,9 @@
                             let finalData = rawPrediction;
                             
                             if (mode === 'reverse') {
-                                // Mode Terbalik: Gajah -> hajag
                                 finalData = rawPrediction.toLowerCase().split('').reverse().join('');
                             } 
                             else if (mode === 'alay') {
-                                // Mode Alay: Gajah -> g4j4h
                                 finalData = rawPrediction.toLowerCase()
                                     .replace(/a/g, '4')
                                     .replace(/e/g, '3')
@@ -398,7 +412,6 @@
                                     .replace(/o/g, '0')
                                     .replace(/s/g, '5');
                             }
-                            // else normal (default)
 
                             log(finalData, 'match');
                             kirim(finalData);
