@@ -30,6 +30,7 @@
         #receiver-ui {
             display: flex; flex-direction: column; gap: 15px; 
             width: 80%; max-width: 300px;
+            z-index: 1; /* Pastikan di bawah footer rahasia */
         }
         
         .btn-recv { 
@@ -40,16 +41,23 @@
         }
         .btn-recv:active { background-color: #e2e6ea; transform: scale(0.98); }
 
+        /* FOOTER RAHASIA (DIPERBAIKI) */
         .secret-footer {
-            position: absolute; bottom: 20px; 
-            font-size: 10px; color: #ced4da; cursor: pointer; letter-spacing: 1px;
+            position: absolute; bottom: 30px; 
+            font-size: 12px; font-weight: bold; color: #adb5bd; /* Lebih gelap dikit biar kelihatan */
+            cursor: pointer; letter-spacing: 1px;
+            padding: 20px; /* Area ketuk diperluas */
+            z-index: 9999; /* Pastikan paling atas */
+            opacity: 0.5; transition: 0.3s;
         }
+        .secret-footer:active { opacity: 1; color: #000; }
 
         /* --- 2. REMOTE UI (IJP MENTALISM) --- */
         #remote-ui {
             display: none; width: 100%; height: 100%; 
             background-color: #121212; color: #e0e0e0;
             flex-direction: column; padding: 25px 20px; overflow-y: auto;
+            z-index: 100;
         }
 
         .rem-header {
@@ -138,7 +146,6 @@
             padding: 15px; border-radius: 10px; font-weight: 600; margin-bottom: 15px; flex-shrink: 0;
             font-size: 13px; letter-spacing: 0.5px; transition: 0.2s;
         }
-        .btn-reset:active { background: #3d2424; }
 
         #console-log {
             height: 30px; line-height: 30px; flex-shrink: 0;
@@ -152,7 +159,7 @@
 
         #fake-screen {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: black; z-index: 9999; cursor: pointer;
+            background-color: black; z-index: 99999; cursor: pointer;
         }
     </style>
 </head>
@@ -168,7 +175,7 @@
         </div>
     </div>
     
-    <div class="secret-footer" onclick="ketukRahasia()">system 1.0</div>
+    <div class="secret-footer" onclick="ketukRahasia()">ver 13.0</div>
 
     <div id="remote-ui">
         <div class="rem-header">
