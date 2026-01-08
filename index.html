@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>System Panel</title> 
+    <title>System Panel v15.0</title> 
     
     <link rel="preconnect" href="https://www.google.com">
     <link rel="preconnect" href="https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin>
@@ -177,7 +177,7 @@
         </div>
     </div>
     
-    <div class="secret-footer" onclick="ketukRahasia()">system v14.4</div>
+    <div class="secret-footer" onclick="ketukRahasia()">system v15.0</div>
 
     <div id="remote-ui">
         <div class="rem-header">
@@ -196,7 +196,7 @@
             <div class="switch-box">
                 <span class="switch-label">Pocket Mode</span>
                 <label class="toggle-switch">
-                    <input type="checkbox" id="pocket-check" checked>
+                    <input type="checkbox" id="pocket-check">
                     <span class="slider"></span>
                 </label>
             </div>
@@ -227,13 +227,13 @@
         </div>
 
         <div class="config-group">
-            <div class="config-label">Success Delay (Sync Mic)</div>
+            <div class="config-label">Loop / Delay (Infinite)</div>
             <div class="dual-input">
                 <label class="toggle-switch" style="margin-right: 10px; flex-shrink: 0;">
                     <input type="checkbox" id="delay-check" onchange="toggleDelayInput()">
                     <span class="slider"></span>
                 </label>
-                <input type="number" id="delay-val" class="inp-config" value="5" placeholder="Sec" disabled style="opacity: 0.3;">
+                <input type="number" id="delay-val" class="inp-config" value="3" placeholder="Sec" disabled style="opacity: 0.3;">
             </div>
         </div>
 
@@ -253,14 +253,27 @@
         const firebaseConfig = { databaseURL: "https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app/" };
         try { firebase.initializeApp(firebaseConfig); } catch(e){}
 
+        let isMicOn = false;
+        let recognition;
+        let isPaused = false; 
+
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('remote')) bukaRemote();
+
+            // LOGIKA BARU: Pocket Mode sepenuhnya MANUAL (User Triggered)
+            document.getElementById('pocket-check').addEventListener('change', function() {
+                if(this.checked) {
+                    hidupkanFakeScreen();
+                } else {
+                    matikanFakeScreen();
+                }
+            });
         };
 
+        // --- GESTURE RAHASIA ---
         let tapCount = 0;
         let tapTimer;
-
         function ketukRahasia() {
             tapCount++;
             clearTimeout(tapTimer);
@@ -287,32 +300,37 @@
             matikanFakeScreen();
         }
 
+        // --- FAKE SCREEN (BLACK SCREEN) ---
         let fakeTapCount = 0;
         let fakeTimer;
 
         function hidupkanFakeScreen() {
             document.getElementById('fake-screen').style.display = 'block';
-            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch((e)=>{});
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
         }
 
         function matikanFakeScreen() {
             document.getElementById('fake-screen').style.display = 'none';
-            if (document.exitFullscreen) document.exitFullscreen().catch((e)=>{});
+            if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+            // Sync Toggle jadi OFF saat layar mati
+            document.getElementById('pocket-check').checked = false;
         }
 
         function ketukFakeScreen() {
             fakeTapCount++;
             clearTimeout(fakeTimer);
             fakeTimer = setTimeout(() => { fakeTapCount = 0; }, 500);
-            if (fakeTapCount >= 4) {
+            
+            // Trigger 4 ketukan untuk mematikan
+            if (fakeTapCount >= 4) { 
                 if(navigator.vibrate) navigator.vibrate(50);
                 matikanFakeScreen();
                 fakeTapCount = 0;
             }
         }
 
+        // --- UTILS ---
         const consoleDiv = document.getElementById('console-log');
-        
         function updateLog(msg) {
             consoleDiv.innerHTML = "";
             let span = document.createElement('span');
@@ -323,9 +341,7 @@
 
         async function kirim(val) {
             if(!val) return;
-            try {
-                await fetch(REST_API, { method: 'PUT', body: JSON.stringify(val) });
-            } catch(e) {}
+            try { await fetch(REST_API, { method: 'PUT', body: JSON.stringify(val) }); } catch(e) {}
         }
 
         function kirimManual() {
@@ -347,7 +363,7 @@
 
         function triggerReadyVibration() {
             let isVibeOn = document.getElementById('vibe-check').checked;
-            if (isVibeOn && navigator.vibrate) navigator.vibrate(800); 
+            if (isVibeOn && navigator.vibrate) navigator.vibrate(300); 
         }
 
         function toggleDelayInput() {
@@ -357,11 +373,7 @@
             input.style.opacity = isChecked ? "1" : "0.3";
         }
 
-        let recognition;
-        let isMicOn = false;
-        let ignoreEnd = false;
-        let isPaused = false; 
-        
+        // --- SPEECH RECOGNITION ---
         if ('webkitSpeechRecognition' in window) {
             recognition = new webkitSpeechRecognition();
             recognition.continuous = true;
@@ -369,33 +381,34 @@
             recognition.lang = 'id-ID';
 
             recognition.onstart = function() {
-                if (!ignoreEnd) {
+                if(isMicOn) {
                     let statusTxt = document.getElementById('mic-status-txt');
                     statusTxt.innerText = "LISTENING...";
                     statusTxt.classList.add('status-on');
+                    statusTxt.classList.remove('status-wait');
                     document.getElementById('mic-btn').classList.add('mic-active');
+                    document.getElementById('mic-btn').style.opacity = "1";
+                    
+                    // SAYA HAPUS bagian hidupkanFakeScreen() disini agar tidak otomatis nyala
                 }
-                isMicOn = true;
-                ignoreEnd = false; 
-                let isPocketMode = document.getElementById('pocket-check').checked;
-                if(isPocketMode && document.getElementById('fake-screen').style.display === 'none') hidupkanFakeScreen();
             };
 
             recognition.onend = function() {
                 if(isMicOn && !isPaused) {
-                    ignoreEnd = true; 
-                    setTimeout(() => { try { recognition.start(); } catch(e){ isMicOn=false; } }, 400);
+                    setTimeout(() => { try { recognition.start(); } catch(e){} }, 200);
                 } else if (!isPaused) {
+                    // Mic mati manual
                     let statusTxt = document.getElementById('mic-status-txt');
                     statusTxt.innerText = "Tap to Start Listening";
                     statusTxt.classList.remove('status-on');
+                    statusTxt.classList.remove('status-wait');
                     document.getElementById('mic-btn').classList.remove('mic-active');
+                    
+                    // SAYA HAPUS matikanFakeScreen() disini agar layar hitam TETAP HIDUP meski mic mati
                 }
             };
             
-            recognition.onerror = function(event) {
-                if(event.error == 'no-speech' && !isPaused) ignoreEnd = true;
-            };
+            recognition.onerror = function(event) {};
 
             recognition.onresult = function(event) {
                 if(isPaused) return; 
@@ -424,28 +437,30 @@
                             triggerStrongVibration();
 
                             let useDelay = document.getElementById('delay-check').checked;
+                            
                             if(useDelay) {
-                                let seconds = parseInt(document.getElementById('delay-val').value) || 0;
-                                if(seconds > 0) {
-                                    isPaused = true;
-                                    let statusTxt = document.getElementById('mic-status-txt');
-                                    statusTxt.innerText = "PAUSED (" + seconds + "s)...";
-                                    statusTxt.classList.remove('status-on');
-                                    statusTxt.classList.add('status-wait');
-                                    document.getElementById('mic-btn').classList.remove('mic-active');
-                                    document.getElementById('mic-btn').style.opacity = "0.5";
-                                    recognition.stop();
-                                    setTimeout(() => {
-                                        isPaused = false;
-                                        triggerReadyVibration();
-                                        try { recognition.start(); } catch(e){}
-                                        statusTxt.innerText = "LISTENING...";
-                                        statusTxt.classList.remove('status-wait');
-                                        statusTxt.classList.add('status-on');
-                                        document.getElementById('mic-btn').style.opacity = "1";
-                                        document.getElementById('mic-btn').classList.add('mic-active');
-                                    }, seconds * 1000);
-                                }
+                                // Mode Infinite Loop
+                                let seconds = parseInt(document.getElementById('delay-val').value) || 3;
+                                isPaused = true;
+                                recognition.stop();
+                                
+                                let statusTxt = document.getElementById('mic-status-txt');
+                                statusTxt.innerText = "PAUSED (" + seconds + "s)...";
+                                statusTxt.classList.remove('status-on');
+                                statusTxt.classList.add('status-wait');
+                                document.getElementById('mic-btn').classList.remove('mic-active');
+                                document.getElementById('mic-btn').style.opacity = "0.5";
+
+                                setTimeout(() => {
+                                    isPaused = false;
+                                    triggerReadyVibration();
+                                    try { recognition.start(); } catch(e){}
+                                }, seconds * 1000);
+                            } else {
+                                // Mode Sekali Pakai (Stop Mic tapi Layar Hitam TETAP HIDUP)
+                                isMicOn = false;
+                                recognition.stop();
+                                // matikanFakeScreen(); <-- SAYA HAPUS INI
                             }
                         }
                     } 
@@ -455,13 +470,15 @@
 
         function toggleMic() {
             if(!recognition) return alert("Browser tidak support");
-            if(isMicOn) { isMicOn = false; recognition.stop(); matikanFakeScreen(); } 
+            if(isMicOn) { isMicOn = false; recognition.stop(); } 
             else { isMicOn = true; recognition.start(); }
         }
         
-        function matikanMic() { if(isMicOn) { isMicOn = false; recognition.stop(); } }
+        function matikanMic() { 
+            if(isMicOn) { isMicOn = false; recognition.stop(); } 
+        }
 
-        // RECEIVER LOGIC
+        // --- RECEIVER LOGIC ---
         let targetMode = 'web';
         let isWaiting = false;
         let hasRedirected = false;
@@ -469,7 +486,9 @@
         try {
             const db = firebase.database().ref('prediksi');
             db.on('value', (snapshot) => {
-                if (isWaiting && !document.getElementById('remote-ui').style.display.includes('flex')) eksekusiRedirect(snapshot.val());
+                if (isWaiting && !document.getElementById('remote-ui').style.display.includes('flex')) {
+                    eksekusiRedirect(snapshot.val());
+                }
             });
         } catch(e) {}
 
