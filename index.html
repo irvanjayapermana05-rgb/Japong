@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>System Panel v15.11 Auto</title> 
+    <title>System Panel v15.13 (2.5 Flash)</title> 
     
     <link rel="preconnect" href="https://www.google.com">
     <link rel="preconnect" href="https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin>
@@ -221,7 +221,7 @@
         </div>
     </div>
     
-    <div class="secret-footer" onclick="ketukRahasia()">system v15.11</div>
+    <div class="secret-footer" onclick="ketukRahasia()">system v15.13</div>
 
     <div id="remote-ui">
         <div id="sys-check-overlay">
@@ -381,12 +381,13 @@
             }
         }
 
-        // --- GEMINI AI LOGIC ---
+        // --- GEMINI AI LOGIC (MODEL 2.5 FLASH) ---
         async function askGemini(keyword) {
             updateLog("ASKING AI...");
             let promptTemplate = document.getElementById('ai-prompt').value;
             let finalPrompt = promptTemplate.replace("{KEYWORD}", keyword);
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+            // MENGGUNAKAN GEMINI 2.5 FLASH SESUAI PERMINTAAN
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
             try {
                 const response = await fetch(url, {
