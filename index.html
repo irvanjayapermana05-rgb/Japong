@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>System Panel v15.40 (Instant Cut)</title> 
+    <title>System Panel v15.41 (Universal)</title> 
     
     <link rel="preconnect" href="https://www.google.com">
     <link rel="preconnect" href="https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin>
@@ -109,7 +109,6 @@
         .rem-title { font-size: 18px; font-weight: 800; color: #ffffff; letter-spacing: 2px; text-transform: uppercase; }
         .btn-close { background: rgba(255,255,255,0.1); color: #aaa; border: none; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; }
 
-        /* SAVE BUTTON (ICON STYLE) */
         .btn-icon-save {
             background: none; border: none; color: #00d2ff; font-size: 22px; cursor: pointer;
             width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
@@ -187,6 +186,7 @@
         #console-log { height: 35px; line-height: 35px; flex-shrink: 0; background: #111; border-top: 1px solid #333; padding: 0 15px; font-size: 16px; font-family: 'Inter', sans-serif; overflow: hidden; white-space: nowrap; margin-top: auto; text-align: center; width: 100%; }
         .log-txt { color: #fff; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; } 
         .log-err { color: #ff0000; font-weight: 800; letter-spacing: 1px; }
+        .log-wait { color: #ffcc00; font-weight: 800; letter-spacing: 1px; }
 
         #fake-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 999999; cursor: pointer; }
     </style>
@@ -203,7 +203,7 @@
         </div>
     </div>
     
-    <div class="secret-footer" onclick="ketukRahasia()">system v15.40</div>
+    <div class="secret-footer" onclick="ketukRahasia()">system v15.41</div>
 
     <div id="remote-ui">
         <div id="sys-check-overlay">
@@ -266,8 +266,8 @@
             </div>
 
             <div class="dual-input" style="margin-bottom: 15px;">
-                <input type="text" id="rule-cat" class="inp-config" placeholder="Kiri (Nama Artis)" style="text-align: left; width: 45%;">
-                <input type="text" id="rule-out" class="inp-config" placeholder="Kanan (Tgl Lahir)" style="text-align: left;">
+                <input type="text" id="rule-cat" class="inp-config" placeholder="Kiri (Kategori)" style="text-align: left; width: 45%;">
+                <input type="text" id="rule-out" class="inp-config" placeholder="Kanan (Target Data)" style="text-align: left;">
                 <button class="btn-add" onclick="saveLogic()">+</button>
             </div>
 
@@ -394,6 +394,7 @@
         let restartTimer;
         let isAIMode = false; 
         
+        // FIXED DEFAULT LOGICS
         const DEFAULT_LOGICS = {
             "Artis": { cat: "Nama Artis", out: "Tanggal Lahir (dd.mm)" },
             "Hewan": { cat: "Nama Hewan", out: "Nama Latin" }
@@ -413,7 +414,8 @@
                 document.getElementById('loop-val').innerText = this.value + "x";
             });
 
-            let stored = localStorage.getItem('sysPanelSettingsV40');
+            // LOGIC LOAD (ROBUST)
+            let stored = localStorage.getItem('sysPanelSettingsV41');
             if(!stored) savedLogics = JSON.parse(JSON.stringify(DEFAULT_LOGICS));
             
             loadAllSettings(); 
@@ -454,8 +456,9 @@
                 },
                 pocket: document.getElementById('pocket-check').checked
             };
-            localStorage.setItem('sysPanelSettingsV40', JSON.stringify(settings));
+            localStorage.setItem('sysPanelSettingsV41', JSON.stringify(settings));
             
+            // SAVE ICON ANIMATION
             let btn = document.getElementById('btn-save-icon');
             let originalHTML = '<i class="fa fa-save"></i>';
             btn.innerHTML = '<i class="fa fa-check"></i>';
@@ -464,10 +467,11 @@
         }
 
         function loadAllSettings() {
-            let data = localStorage.getItem('sysPanelSettingsV40');
+            let data = localStorage.getItem('sysPanelSettingsV41');
             if(data) {
                 let s = JSON.parse(data);
                 if(s.apiKey) document.getElementById('ai-key').value = s.apiKey;
+                
                 if(s.logics && Object.keys(s.logics).length > 0) savedLogics = s.logics;
                 else savedLogics = JSON.parse(JSON.stringify(DEFAULT_LOGICS));
                 
@@ -509,6 +513,7 @@
             }
         }
 
+        // --- UI TOGGLES ---
         function toggleMainMode() {
             isAIMode = document.getElementById('main-mode-toggle').checked;
             const title = document.getElementById('header-title');
@@ -533,24 +538,39 @@
         function toggleInjVibe() { document.getElementById('inj-vibe-box').style.display = document.getElementById('inj-haptic-check').checked ? 'flex' : 'none'; }
         function toggleVoiceSettings() { document.getElementById('voice-controls-box').style.display = document.getElementById('voice-settings-toggle').checked ? 'block' : 'none'; }
 
+        // --- LOOP & RESTART LOGIC ---
         function handlePostSuccess() {
+            // STOP MIC FIRST to avoid conflicts
+            if(recognition) recognition.stop();
+            isPaused = true; 
+            updateMicUI(false);
+
             let isLoop = isAIMode ? document.getElementById('ai-loop-check').checked : document.getElementById('inj-loop-check').checked;
             let delay = isAIMode ? (parseFloat(document.getElementById('ai-delay-val').value) || 0) : (parseFloat(document.getElementById('inj-delay-val').value) || 0);
 
             if(!isLoop) {
                 stopMicLogic();
+                updateLog("DONE");
             } else {
+                // COUNTDOWN VISUAL
                 if(delay > 0) {
-                    isPaused = true;
-                    // DO NOT STOP MIC HERE, JUST PAUSE LOGIC
-                    updateLog("WAIT " + delay + "s");
-                    setTimeout(() => {
-                        isPaused = false;
-                        updateLog("READY");
-                    }, delay * 1000);
+                    updateMicWait(true); // Yellow Blink
+                    let timeLeft = delay;
+                    let countdown = setInterval(() => {
+                        updateLog("WAIT " + timeLeft.toFixed(1) + "s");
+                        timeLeft -= 0.5;
+                        if(timeLeft < 0) {
+                            clearInterval(countdown);
+                            isPaused = false;
+                            updateMicWait(false);
+                            updateLog("READY");
+                            startMicLogic(); // FORCE RESTART
+                        }
+                    }, 500);
                 } else {
-                    isPaused = false; 
-                    // NO DELAY -> INSTANT READY
+                    // INSTANT RESTART (0s)
+                    isPaused = false;
+                    startMicLogic();
                 }
             }
         }
@@ -572,6 +592,7 @@
             navigator.vibrate(pattern);
         }
 
+        // --- LOGIC MANAGER ---
         function renderLogicSelect() {
             let sel = document.getElementById('logic-select');
             sel.innerHTML = "";
@@ -631,14 +652,19 @@
             let activeCat = document.getElementById('rule-cat').value || "Sesuatu";
             let activeOut = document.getElementById('rule-out').value || "Jawab singkat";
             
-            // STRICT PROMPT V15.40 (DIRECT ANSWER)
-            let prompt = `Instructions: You are a precise data retrieval system.
-Query Context: "${activeCat}"
-Desired Output Format: "${activeOut}"
-User Input: "${keyword}"
+            // UNIVERSAL LOGIC PROMPT V15.41
+            let prompt = `SYSTEM MODE: STRICT DATA RETRIEVAL.
+CONTEXT CATEGORY: "${activeCat}"
+TARGET INFORMATION: "${activeOut}"
+SEARCH QUERY: "${keyword}"
 
-Task: Identify the specific subject in the User Input based on the Query Context. Then, provide ONLY the specific data requested in the Desired Output Format.
-Constraint: Output MUST be a single string/value. No introductory text, no explanations, no punctuation unless necessary.`;
+INSTRUCTIONS:
+1. Identify the entity in the SEARCH QUERY associated with the CONTEXT CATEGORY.
+2. Retrieve ONLY the TARGET INFORMATION for that entity.
+3. STRICT OUTPUT: Provide ONLY the result. NO extra words (e.g., "is", "was", "at", "born in").
+4. FORMAT: If date/time, use digits (DD.MM or HH.MM). If text, keep it concise.
+
+OUTPUT:`;
             
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`, {
@@ -663,6 +689,10 @@ Constraint: Output MUST be a single string/value. No introductory text, no expla
             if (!window.speechSynthesis) return;
             window.speechSynthesis.cancel();
             
+            // PAUSE MIC WHILE SPEAKING IS CRITICAL
+            if(recognition) recognition.stop();
+            isPaused = true; 
+
             const rate = parseFloat(document.getElementById('tts-rate').value);
             const pitch = parseFloat(document.getElementById('tts-pitch').value);
             const loops = parseInt(document.getElementById('tts-loop').value);
@@ -675,6 +705,7 @@ Constraint: Output MUST be a single string/value. No introductory text, no expla
                     count++; 
                     if (count < loops) setTimeout(speak, 500); 
                     else {
+                        // DONE SPEAKING -> TRIGGER LOOP
                         handlePostSuccess(); 
                     }
                 };
@@ -685,7 +716,7 @@ Constraint: Output MUST be a single string/value. No introductory text, no expla
 
         async function kirim(val) { try { await fetch(REST_API, { method: 'PUT', body: JSON.stringify(val) }); } catch(e) {} }
 
-        // --- CORE MIC (INSTANT KILL) ---
+        // --- CORE MIC ---
         if ('webkitSpeechRecognition' in window) {
             recognition = new webkitSpeechRecognition();
             recognition.continuous = true; recognition.interimResults = false; recognition.lang = 'id-ID';
@@ -716,9 +747,9 @@ Constraint: Output MUST be a single string/value. No introductory text, no expla
 
                         if (rawPrediction.length > 0) {
                             
-                            // INSTANT KILL LOGIC
+                            // KILL MIC INSTANTLY ON SUCCESS
                             isPaused = true; 
-                            recognition.stop(); 
+                            recognition.stop();
                             updateMicUI(false);
                             updateLog("PROCESSING...");
 
@@ -742,15 +773,31 @@ Constraint: Output MUST be a single string/value. No introductory text, no expla
         }
 
         function toggleMic() { if(!recognition) return alert("No Speech API"); if(isMicIntentOn) stopMicLogic(); else startMicLogic(); }
-        function startMicLogic() { isMicIntentOn = true; try { recognition.start(); } catch(e){} }
-        function stopMicLogic() { isMicIntentOn = false; try { recognition.stop(); } catch(e){} updateMicUI(false); }
+        function startMicLogic() { isMicIntentOn = true; isPaused = false; try { recognition.start(); } catch(e){} }
+        function stopMicLogic() { isMicIntentOn = false; isPaused = false; try { recognition.stop(); } catch(e){} updateMicUI(false); }
+        
         function updateMicUI(isOn) {
             let el = document.getElementById('mic-status-txt'); let btn = document.getElementById('mic-btn');
+            // Remove waiting class first
+            btn.classList.remove('mic-waiting');
+            
             if(isOn) { el.innerText="LISTENING..."; el.classList.add('status-on'); btn.classList.add('mic-active'); }
             else { el.innerText="Tap to Start"; el.classList.remove('status-on'); btn.classList.remove('mic-active'); }
             if(isOn) btn.style.borderColor = isAIMode ? "#a968ff" : "#00d2ff";
             if(isOn) btn.style.background = isAIMode ? "#a968ff" : "#00d2ff";
             else btn.style.background = "linear-gradient(145deg, #1e1e1e, #252525)";
+        }
+
+        function updateMicWait(isWait) {
+            let el = document.getElementById('mic-status-txt'); let btn = document.getElementById('mic-btn');
+            if(isWait) {
+                el.innerText="WAITING...";
+                el.style.color = "#ffcc00";
+                btn.classList.add('mic-waiting');
+                btn.classList.remove('mic-active');
+            } else {
+                btn.classList.remove('mic-waiting');
+            }
         }
 
         function updateLog(msg) { document.getElementById('console-log').innerHTML = `<span class="log-txt">${msg}</span>`; }
