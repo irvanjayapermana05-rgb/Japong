@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>System Panel v15.43 (Sync Core)</title> 
+    <title>System Panel v15.44 (Log Fix)</title> 
     
     <link rel="preconnect" href="https://www.google.com">
     <link rel="preconnect" href="https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin>
@@ -208,7 +208,7 @@
         </div>
     </div>
     
-    <div class="secret-footer" onclick="ketukRahasia()">system v15.43</div>
+    <div class="secret-footer" onclick="ketukRahasia()">system v15.44</div>
 
     <div id="remote-ui">
         <div id="sys-check-overlay">
@@ -399,7 +399,6 @@
         let restartTimer;
         let isAIMode = false; 
         
-        // FIXED DEFAULT LOGICS
         const DEFAULT_LOGICS = {
             "Artis": { cat: "Nama Artis", out: "Tanggal Lahir (dd.mm)" },
             "Hewan": { cat: "Nama Hewan", out: "Nama Latin" }
@@ -419,8 +418,7 @@
                 document.getElementById('loop-val').innerText = this.value + "x";
             });
 
-            // LOGIC LOAD (ROBUST)
-            let stored = localStorage.getItem('sysPanelSettingsV43');
+            let stored = localStorage.getItem('sysPanelSettingsV44');
             if(!stored) savedLogics = JSON.parse(JSON.stringify(DEFAULT_LOGICS));
             
             loadAllSettings(); 
@@ -461,9 +459,8 @@
                 },
                 pocket: document.getElementById('pocket-check').checked
             };
-            localStorage.setItem('sysPanelSettingsV43', JSON.stringify(settings));
+            localStorage.setItem('sysPanelSettingsV44', JSON.stringify(settings));
             
-            // SAVE ICON ANIMATION
             let btn = document.getElementById('btn-save-icon');
             let originalHTML = '<i class="fa fa-save"></i>';
             btn.innerHTML = '<i class="fa fa-check"></i>';
@@ -472,11 +469,10 @@
         }
 
         function loadAllSettings() {
-            let data = localStorage.getItem('sysPanelSettingsV43');
+            let data = localStorage.getItem('sysPanelSettingsV44');
             if(data) {
                 let s = JSON.parse(data);
                 if(s.apiKey) document.getElementById('ai-key').value = s.apiKey;
-                
                 if(s.logics && Object.keys(s.logics).length > 0) savedLogics = s.logics;
                 else savedLogics = JSON.parse(JSON.stringify(DEFAULT_LOGICS));
                 
@@ -518,7 +514,6 @@
             }
         }
 
-        // --- UI TOGGLES ---
         function toggleMainMode() {
             isAIMode = document.getElementById('main-mode-toggle').checked;
             const title = document.getElementById('header-title');
@@ -543,30 +538,35 @@
         function toggleInjVibe() { document.getElementById('inj-vibe-box').style.display = document.getElementById('inj-haptic-check').checked ? 'flex' : 'none'; }
         function toggleVoiceSettings() { document.getElementById('voice-controls-box').style.display = document.getElementById('voice-settings-toggle').checked ? 'block' : 'none'; }
 
-        // --- LOOP & RESTART LOGIC ---
+        // --- LOOP & RESTART LOGIC (SEPARATED STATUS UI) ---
         function handlePostSuccess() {
             if(recognition) recognition.stop();
             isPaused = true; 
-            updateMicUI(false);
-
+            // DO NOT update bottom log here!
+            
             let isLoop = isAIMode ? document.getElementById('ai-loop-check').checked : document.getElementById('inj-loop-check').checked;
             let delay = isAIMode ? (parseFloat(document.getElementById('ai-delay-val').value) || 0) : (parseFloat(document.getElementById('inj-delay-val').value) || 0);
 
             if(!isLoop) {
                 stopMicLogic();
-                updateLog("DONE");
+                // Status to top UI
+                document.getElementById('mic-status-txt').innerText = "DONE";
             } else {
                 if(delay > 0) {
                     updateMicWait(true); 
                     let timeLeft = delay;
+                    // Initial wait msg
+                    document.getElementById('mic-status-txt').innerText = "WAIT " + timeLeft.toFixed(1) + "s";
+                    
                     let countdown = setInterval(() => {
-                        updateLog("WAIT " + timeLeft.toFixed(1) + "s");
                         timeLeft -= 0.5;
+                        document.getElementById('mic-status-txt').innerText = "WAIT " + timeLeft.toFixed(1) + "s";
+                        
                         if(timeLeft < 0) {
                             clearInterval(countdown);
                             isPaused = false;
-                            updateMicWait(false);
-                            updateLog("READY");
+                            updateMicWait(false); // Green again
+                            document.getElementById('mic-status-txt').innerText = "READY";
                             startMicLogic(); 
                         }
                     }, 500);
@@ -594,7 +594,6 @@
             navigator.vibrate(pattern);
         }
 
-        // --- LOGIC MANAGER ---
         function renderLogicSelect() {
             let sel = document.getElementById('logic-select');
             sel.innerHTML = "";
@@ -640,8 +639,7 @@
         function handleManualInput() {
             let text = document.getElementById('inj-manual-input').value.trim();
             if(!text) return;
-            // SYNCED LOGIC V15.43
-            updateLog(text); 
+            updateLog(text);
             kirim(text);
             triggerSuccessVibration();
             handlePostSuccess();
@@ -715,7 +713,7 @@ OUTPUT:`;
 
         async function kirim(val) { try { await fetch(REST_API, { method: 'PUT', body: JSON.stringify(val) }); } catch(e) {} }
 
-        // --- CORE MIC (SYNCED V15.43) ---
+        // --- CORE MIC (INSTANT VIBE & SEPARATED LOGS) ---
         if ('webkitSpeechRecognition' in window) {
             recognition = new webkitSpeechRecognition();
             recognition.continuous = true; recognition.interimResults = false; recognition.lang = 'id-ID';
@@ -746,16 +744,17 @@ OUTPUT:`;
 
                         if (rawPrediction.length > 0) {
                             
-                            // 1. INSTANT FEEDBACK (SYNCED)
+                            // 1. INSTANT VIBRATION
                             triggerSuccessVibration();
 
-                            // 2. STOP LISTENING
+                            // 2. STOP MIC
                             isPaused = true; 
                             recognition.stop();
-                            updateMicUI(false);
-                            updateLog("PROCESSING...");
+                            
+                            // 3. UI FEEDBACK (Top Status Only)
+                            document.getElementById('mic-status-txt').innerText = "PROCESSING...";
+                            document.getElementById('mic-btn').classList.remove('mic-active');
 
-                            // 3. BRANCHING
                             if (isAIMode) {
                                 askGemini(rawPrediction);
                             } else {
@@ -764,9 +763,11 @@ OUTPUT:`;
                                 if (mode === 'reverse') finalData = rawPrediction.toLowerCase().split('').reverse().join('');
                                 else if (mode === 'alay') finalData = rawPrediction.toLowerCase().replace(/a/g,'4').replace(/e/g,'3').replace(/i/g,'1').replace(/o/g,'0').replace(/s/g,'5');
 
-                                // SYNCED LOG UPDATE (V15.43)
+                                // 4. BOTTOM LOG (Persistent)
                                 updateLog(finalData); 
                                 kirim(finalData);
+                                
+                                // 5. LOOP HANDLER (Uses Top Status for WAIT)
                                 handlePostSuccess();
                             }
                         }
@@ -793,7 +794,6 @@ OUTPUT:`;
         function updateMicWait(isWait) {
             let el = document.getElementById('mic-status-txt'); let btn = document.getElementById('mic-btn');
             if(isWait) {
-                el.innerText="WAITING...";
                 el.style.color = "#ffcc00";
                 btn.classList.add('mic-waiting');
                 btn.classList.remove('mic-active');
