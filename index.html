@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>System Panel v15.45 (Pure Log)</title> 
+    <title>System Panel v15.47 (2.5 Flash)</title> 
     
     <link rel="preconnect" href="https://www.google.com">
     <link rel="preconnect" href="https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin>
@@ -208,7 +208,7 @@
         </div>
     </div>
     
-    <div class="secret-footer" onclick="ketukRahasia()">system v15.45</div>
+    <div class="secret-footer" onclick="ketukRahasia()">system v15.47</div>
 
     <div id="remote-ui">
         <div id="sys-check-overlay">
@@ -314,7 +314,7 @@
 
             <div class="config-group" style="margin-top:15px; border-top:1px solid #333; padding-top:10px;">
                 <div class="dual-input" style="justify-content: space-between; padding: 0 5px;">
-                    <span class="switch-label" style="font-size:10px; color:#a968ff;">Custom Voice Settings</span>
+                    <span class="switch-label" style="font-size:10px;">Custom Voice Settings</span>
                     <label class="toggle-switch" style="transform: scale(0.8);">
                         <input type="checkbox" id="voice-settings-toggle" onchange="toggleVoiceSettings()">
                         <span class="slider ai-slider"></span>
@@ -418,7 +418,7 @@
                 document.getElementById('loop-val').innerText = this.value + "x";
             });
 
-            let stored = localStorage.getItem('sysPanelSettingsV45');
+            let stored = localStorage.getItem('sysPanelSettingsV47');
             if(!stored) savedLogics = JSON.parse(JSON.stringify(DEFAULT_LOGICS));
             
             loadAllSettings(); 
@@ -459,7 +459,7 @@
                 },
                 pocket: document.getElementById('pocket-check').checked
             };
-            localStorage.setItem('sysPanelSettingsV45', JSON.stringify(settings));
+            localStorage.setItem('sysPanelSettingsV47', JSON.stringify(settings));
             
             let btn = document.getElementById('btn-save-icon');
             let originalHTML = '<i class="fa fa-save"></i>';
@@ -469,10 +469,11 @@
         }
 
         function loadAllSettings() {
-            let data = localStorage.getItem('sysPanelSettingsV45');
+            let data = localStorage.getItem('sysPanelSettingsV47');
             if(data) {
                 let s = JSON.parse(data);
                 if(s.apiKey) document.getElementById('ai-key').value = s.apiKey;
+                
                 if(s.logics && Object.keys(s.logics).length > 0) savedLogics = s.logics;
                 else savedLogics = JSON.parse(JSON.stringify(DEFAULT_LOGICS));
                 
@@ -542,13 +543,13 @@
         function handlePostSuccess() {
             if(recognition) recognition.stop();
             isPaused = true; 
-            
+            updateMicUI(false); 
+
             let isLoop = isAIMode ? document.getElementById('ai-loop-check').checked : document.getElementById('inj-loop-check').checked;
             let delay = isAIMode ? (parseFloat(document.getElementById('ai-delay-val').value) || 0) : (parseFloat(document.getElementById('inj-delay-val').value) || 0);
 
             if(!isLoop) {
                 stopMicLogic();
-                // STATUS ONLY (NOT BOTTOM LOG)
                 document.getElementById('mic-status-txt').innerText = "DONE";
             } else {
                 if(delay > 0) {
@@ -565,6 +566,8 @@
                             isPaused = false;
                             updateMicWait(false);
                             document.getElementById('mic-status-txt').innerText = "READY";
+                            // LONG VIBE SIGNAL (READY)
+                            if(navigator.vibrate) navigator.vibrate(800);
                             startMicLogic(); 
                         }
                     }, 500);
@@ -592,7 +595,6 @@
             navigator.vibrate(pattern);
         }
 
-        // --- LOGIC MANAGER ---
         function renderLogicSelect() {
             let sel = document.getElementById('logic-select');
             sel.innerHTML = "";
@@ -638,6 +640,7 @@
         function handleManualInput() {
             let text = document.getElementById('inj-manual-input').value.trim();
             if(!text) return;
+            
             updateLog(text);
             kirim(text);
             triggerSuccessVibration();
@@ -652,6 +655,7 @@
             let activeCat = document.getElementById('rule-cat').value || "Sesuatu";
             let activeOut = document.getElementById('rule-out').value || "Jawab singkat";
             
+            // STRICT PROMPT V15.47 (2.5 FLASH RESTORED)
             let prompt = `SYSTEM MODE: STRICT DATA RETRIEVAL.
 CONTEXT CATEGORY: "${activeCat}"
 TARGET INFORMATION: "${activeOut}"
@@ -666,21 +670,35 @@ INSTRUCTIONS:
 OUTPUT:`;
             
             try {
+                // RESTORED 2.5 FLASH WITH HEADER AUTH
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': currentKey },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': currentKey 
+                    },
+                    body: JSON.stringify({ 
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { maxOutputTokens: 30, temperature: 0.0 } // Keep speed optimization
+                    })
                 });
                 const data = await response.json();
                 
-                if(data.error) { updateErrorLog("ERR: " + data.error.message); return; }
+                if(data.error) {
+                    handlePostSuccess(); // AUTO RETRY
+                    return;
+                }
 
                 if (data.candidates && data.candidates[0].content) {
                     let answer = data.candidates[0].content.parts[0].text.replace(/[*_#]/g, '').trim();
                     updateLog(keyword + ": " + answer);
                     speakResult(answer);
-                } else { updateErrorLog("NO DATA"); }
-            } catch (error) { updateErrorLog("NET ERR: " + error.message); }
+                } else { 
+                    handlePostSuccess();
+                }
+            } catch (error) { 
+                handlePostSuccess();
+            }
         }
 
         function speakResult(text) {
@@ -747,7 +765,6 @@ OUTPUT:`;
 
                             isPaused = true; 
                             recognition.stop();
-                            // UPDATE STATUS UI ONLY (NOT LOG)
                             document.getElementById('mic-status-txt').innerText = "PROCESSING...";
                             document.getElementById('mic-btn').classList.remove('mic-active');
 
@@ -759,7 +776,7 @@ OUTPUT:`;
                                 if (mode === 'reverse') finalData = rawPrediction.toLowerCase().split('').reverse().join('');
                                 else if (mode === 'alay') finalData = rawPrediction.toLowerCase().replace(/a/g,'4').replace(/e/g,'3').replace(/i/g,'1').replace(/o/g,'0').replace(/s/g,'5');
 
-                                updateLog(finalData); // LOG RESULT HERE
+                                updateLog(finalData); 
                                 kirim(finalData);
                                 handlePostSuccess();
                             }
