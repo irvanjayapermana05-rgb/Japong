@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>System Panel v16.1 (Layout Fix)</title> 
+    <title>Receiver - System v16.2</title> 
     
     <link rel="preconnect" href="https://www.google.com">
     <link rel="preconnect" href="https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin>
@@ -12,7 +12,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
         /* --- GLOBAL & RESET --- */
@@ -24,932 +23,180 @@
             height: 100vh; height: 100dvh; 
             overflow: hidden; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background-color: white; transition: background 0.3s;
+            background-color: white;
             user-select: none; -webkit-user-select: none;
         }
 
-        /* --- 1. RECEIVER UI --- */
+        /* --- UI CONTAINER --- */
         #receiver-ui {
             display: flex; flex-direction: column; gap: 15px; 
-            width: 80%; max-width: 300px;
+            width: 85%; max-width: 320px;
             z-index: 1;
         }
         
+        /* TOMBOL UTAMA (WEB & IMAGE) */
         .btn-recv { 
             background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; 
-            color: #495057; font-size: 16px; font-weight: 500; padding: 18px 20px; 
+            color: #495057; font-size: 18px; font-weight: 600; padding: 20px; 
             cursor: pointer; width: 100%; outline: none; -webkit-tap-highlight-color: transparent;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.2s;
         }
         .btn-recv:active { background-color: #e2e6ea; transform: scale(0.98); }
+        .btn-recv.active-mode { border: 2px solid #00d2ff; background-color: #f0fbff; color: #007bff; }
 
-        .secret-footer {
-            position: absolute; bottom: 45px; 
-            font-size: 11px; font-weight: bold; color: #ced4da; 
-            cursor: pointer; letter-spacing: 1px;
-            padding: 25px; z-index: 99999; 
-            opacity: 0.4; transition: 0.3s;
-        }
-        .secret-footer:active { opacity: 1; color: #000; }
-
-        /* --- 2. REMOTE UI --- */
-        #remote-ui {
-            display: none; width: 100%; height: 100%; 
-            background-color: #121212; color: #e0e0e0;
-            flex-direction: column; 
-            padding: 25px 20px 20px 20px; 
-            overflow-y: auto;
-            z-index: 100; position: relative;
+        /* HEADER TEXT MODE */
+        .mode-label {
+            font-size: 12px; font-weight: bold; color: #aaa; 
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-top: 10px; text-align: center;
         }
 
-        /* --- SYSTEM CHECK --- */
-        #sys-check-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 200;
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            padding: 30px; text-align: center;
+        /* CONTAINER TOMBOL TEXT MODE */
+        .text-mode-container {
+            display: flex; gap: 8px; width: 100%;
         }
-        .sys-title { color: #fff; font-size: 18px; font-weight: 800; letter-spacing: 2px; margin-bottom: 30px; border-bottom: 2px solid #00d2ff; padding-bottom: 10px; }
-        .check-item { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 14px; color: #aaa; font-weight: 500; }
-        .check-status { font-weight: bold; }
-        .status-pending { color: #666; }
-        .status-ok { color: #00ff00; text-shadow: 0 0 10px rgba(0,255,0,0.5); }
-        .status-err { color: #ff0000; }
 
-        .manual-confirm {
-            margin-top: 10px; font-size: 12px; color: #ffcc00; 
-            border: 1px dashed #444; padding: 15px; border-radius: 8px;
-            background: rgba(255, 204, 0, 0.05); cursor: pointer;
-            display: flex; align-items: center; justify-content: space-between; width: 100%;
-        }
-        
-        .auto-start-wrap {
-            margin-top: 25px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
-            color: #888; font-size: 12px;
-        }
-        
-        .btn-start-sys {
-            margin-top: 20px; width: 100%;
-            background: #00d2ff; color: #000; border: none; padding: 15px;
-            border-radius: 50px; font-weight: 800; letter-spacing: 1px;
-            cursor: pointer; opacity: 0.3; pointer-events: none; transition: 0.3s;
-            box-shadow: 0 0 15px rgba(0, 210, 255, 0.1);
-        }
-        .btn-start-sys.ready { opacity: 1; pointer-events: all; transform: scale(1.05); box-shadow: 0 0 25px rgba(0, 210, 255, 0.4); }
-
-        /* --- REMOTE COMPONENTS --- */
-        .rem-header {
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid #2c2c2c; padding-bottom: 15px; margin-bottom: 20px; width: 100%;
-            flex-shrink: 0;
-        }
-        
-        .header-left { display: flex; align-items: center; gap: 10px; }
-        
-        .rem-title { font-size: 18px; font-weight: 800; color: #ffffff; letter-spacing: 2px; text-transform: uppercase; }
-        .btn-close { background: rgba(255,255,255,0.1); color: #aaa; border: none; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; }
-
-        .btn-icon-save {
-            background: none; border: none; color: #00d2ff; font-size: 22px; cursor: pointer;
-            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+        /* TOMBOL KECIL TEXT MODE */
+        .btn-text-mode {
+            flex: 1;
+            padding: 12px 5px;
+            font-size: 13px; font-weight: 600;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            color: #666;
+            cursor: pointer;
             transition: 0.2s;
         }
-        .btn-icon-save:active { transform: scale(0.9); }
-        .btn-icon-save.saved { color: #00ff00; transform: scale(1.1); } 
 
-        .mic-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 25px; flex-shrink: 0; width: 100%; }
-        .mic-circle {
-            width: 90px; height: 90px; border-radius: 50%;
-            background: linear-gradient(145deg, #1e1e1e, #252525);
-            border: 1px solid #333;
-            box-shadow: 5px 5px 10px #0b0b0b, -5px -5px 10px #292929;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 32px; color: #555; cursor: pointer;
-            transition: all 0.3s ease; position: relative;
+        /* STATE AKTIF TOMBOL TEXT MODE */
+        .btn-text-mode.active {
+            background-color: #222;
+            color: #fff;
+            border-color: #000;
         }
-        .mic-active { 
-            border-color: #00d2ff; color: #ffffff; background: #00d2ff;
-            box-shadow: 0 0 30px rgba(0, 210, 255, 0.4);
-            animation: breathe 2s infinite;
+
+        .status-text {
+            margin-top: 20px; text-align: center; font-size: 14px; 
+            color: #ccc; font-weight: 500; animation: pulse 1.5s infinite;
+            display: none; /* Hidden by default */
         }
-        .mic-waiting {
-            border-color: #ffcc00 !important; color: #ffcc00 !important; background: #222 !important;
-            box-shadow: none; animation: pulseWait 1s infinite;
-        }
-        @keyframes breathe { 0% { box-shadow: 0 0 20px rgba(0, 210, 255, 0.3); } 50% { box-shadow: 0 0 40px rgba(0, 210, 255, 0.6); } 100% { box-shadow: 0 0 20px rgba(0, 210, 255, 0.3); } }
-        @keyframes pulseWait { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-        
-        .mic-status { margin-top: 15px; font-size: 11px; color: #666; font-weight: 500; letter-spacing: 0.5px;}
-        .status-on { color: #00d2ff; text-shadow: 0 0 10px rgba(0,210,255,0.5); }
-        
-        /* HEADER TOGGLE */
-        .header-toggle { position: relative; display: inline-block; width: 36px; height: 20px; }
-        .header-toggle input { opacity: 0; width: 0; height: 0; }
-        .h-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
-        .h-slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .h-slider { background-color: #a968ff; } 
-        input:checked + .h-slider:before { transform: translateX(16px); }
-        
-        .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        input:checked + .slider { background-color: #00d2ff; }
-        input:checked + .slider.ai-slider { background-color: #a968ff; }
-        input:checked + .slider:before { transform: translateX(20px); }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-        .config-group { display: flex; flex-direction: column; margin-bottom: 20px; flex-shrink: 0; width: 100%; }
-        .config-label { color: #666; font-size: 10px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; margin-left: 5px; }
-        .dual-input { display: flex; gap: 5px; width: 100%; align-items: center; } /* FIX: gap 5px */
-        
-        /* FIX: flex 1 allows shrinking to prevent overflow */
-        .inp-config { flex: 1; min-width: 0; background: #1c1c1c; border: 1px solid #2c2c2c; color: #fff; padding: 12px; border-radius: 10px; outline: none; font-family: 'Inter', sans-serif; text-align: center; font-size: 14px; font-weight: 500; transition: 0.2s; }
-        .inp-config:focus { border-color: #444; background: #222; }
-
-        .mode-panel { display: none; flex-direction: column; width: 100%; }
-        .mode-panel.active { display: flex; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
-
-        .ai-header { color: #a968ff; font-weight: 800; font-size: 12px; letter-spacing: 1px; margin-bottom: 10px; }
-        .inj-header { color: #00d2ff; font-weight: 800; font-size: 12px; letter-spacing: 1px; margin-bottom: 10px; }
-
-        .range-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-        .range-label { color: #888; font-size: 10px; width: 60px; }
-        input[type=range] { flex: 1; accent-color: #a968ff; }
-        
-        #logic-select { width: 100%; margin-bottom: 10px; background: #222; border-color: #444; color: #fff; }
-        
-        /* BUTTONS WITH FIXED WIDTH BUT NO OVERFLOW */
-        .btn-add { background: #333; color: #a968ff; border: 1px solid #a968ff; border-radius: 8px; width: 40px; cursor: pointer; font-weight: bold; height: 42px; flex-shrink: 0; }
-        .btn-del-mode { background: #330000; color: #ff4444; border: 1px solid #ff4444; border-radius: 8px; padding: 0 15px; cursor: pointer; font-size: 10px; margin-left: 5px; height: 42px; }
-        
-        .btn-prompt-toggle { background: #333; color: #aaa; border: 1px solid #444; border-radius: 8px; width: 40px; cursor: pointer; transition: 0.3s; height: 42px; flex-shrink: 0; }
-        .btn-prompt-toggle:active, .btn-prompt-toggle.open { color: #a968ff; border-color: #a968ff; background: #222; }
-
-        .btn-manual-send { background: #333; color: #fff; border: 1px solid #555; padding: 12px 20px; border-radius: 10px; font-weight: 800; cursor: pointer; font-size: 12px; width: 30%; transition: 0.3s; }
-        .btn-manual-send:active { transform: scale(0.95); opacity: 0.8; }
-        .btn-inj-send { background: #00d2ff; color: #000; border:none; }
-
-        .global-settings { width: 100%; margin-bottom: 10px; display: flex; justify-content: flex-end; padding-right: 5px; }
-        .pocket-toggle-wrap { display: flex; align-items: center; gap: 8px; }
-        .pocket-label { font-size: 10px; color: #666; font-weight: bold; }
-
-        #console-log { height: 35px; line-height: 35px; flex-shrink: 0; background: #111; border-top: 1px solid #333; padding: 0 15px; font-size: 16px; font-family: 'Inter', sans-serif; overflow: hidden; white-space: nowrap; margin-top: auto; text-align: center; width: 100%; }
-        .log-txt { color: #fff; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; } 
-        .log-err { color: #ff0000; font-weight: 800; letter-spacing: 1px; }
-        .log-wait { color: #ffcc00; font-weight: 800; letter-spacing: 1px; }
-
-        #fake-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 999999; cursor: pointer; }
-        
-        #prompt-box { display: none; margin-bottom: 15px; animation: slideDown 0.2s; }
-        @keyframes slideDown { from {height: 0; opacity: 0;} to {height: 100px; opacity: 1;} }
-        #ai-master-prompt { width: 100%; height: 100px; background: #111; border: 1px solid #a968ff; color: #a968ff; font-family: monospace; font-size: 11px; padding: 8px; border-radius: 8px; resize: none; outline: none; }
     </style>
 </head>
-<body id="body-bg">
-
-    <div id="fake-screen" onclick="ketukFakeScreen()"></div>
+<body>
 
     <div id="receiver-ui">
-        <div class="btn-container">
-            <button class="btn-recv" onclick="siapkan('web')">Web Search</button>
-            <button class="btn-recv" onclick="siapkan('image')">Image Search</button>
-            <button class="btn-recv" onclick="siapkan('wiki')">Wikipedia</button>
-        </div>
-    </div>
-    
-    <div class="secret-footer" onclick="ketukRahasia()">system v16.1</div>
+        <button id="btn-web" class="btn-recv" onclick="siapkan('web')">Web Search</button>
+        <button id="btn-img" class="btn-recv" onclick="siapkan('image')">Image Search</button>
 
-    <div id="remote-ui">
-        <div id="sys-check-overlay">
-            <div class="sys-title">SYSTEM CHECK</div>
-            <div class="check-item"><span>1. Speech API</span><span id="chk-api" class="check-status status-pending">WAIT...</span></div>
-            <div class="check-item"><span>2. Internet</span><span id="chk-net" class="check-status status-pending">WAIT...</span></div>
-            <div class="check-item"><span>3. Mic Access</span><span id="chk-mic" class="check-status status-pending">WAIT...</span></div>
-            
-            <div class="manual-confirm" onclick="toggleScreenConfirm()" id="manual-confirm-box">
-                <div style="text-align: left; padding-right: 10px;"><b>Confirm:</b> I have set Screen Timeout to "Never".</div>
-                <i id="scr-icon" class="fa fa-square" style="font-size: 18px;"></i>
-            </div>
-            
-            <div class="auto-start-wrap">
-                <input type="checkbox" id="auto-start-chk" checked onchange="cekTombolReady()">
-                <label for="auto-start-chk">Auto-start jika OK</label>
-            </div>
-
-            <button id="btn-go" class="btn-start-sys" onclick="tutupSystemCheck()">START SYSTEM</button>
+        <div class="mode-label">Text Manipulation</div>
+        <div class="text-mode-container">
+            <button class="btn-text-mode active" onclick="setTextMode('normal', this)">Normal</button>
+            <button class="btn-text-mode" onclick="setTextMode('reverse', this)">Terbalik</button>
+            <button class="btn-text-mode" onclick="setTextMode('alay', this)">Alay</button>
         </div>
 
-        <div class="rem-header">
-            <div class="header-left">
-                <label class="header-toggle">
-                    <input type="checkbox" id="main-mode-toggle" onchange="toggleMainMode()">
-                    <span class="h-slider"></span>
-                </label>
-                <div class="rem-title" id="header-title">INJECT</div>
-            </div>
-            <button id="btn-save-icon" class="btn-icon-save" onclick="saveAllSettings()"><i class="fa fa-save"></i></button>
-            <button class="btn-close" onclick="keluarRemote()"><i class="fa fa-times"></i></button>
-        </div>
-
-        <div class="global-settings">
-            <div class="pocket-toggle-wrap">
-                <span class="pocket-label">Pocket Mode</span>
-                <label class="toggle-switch" style="transform: scale(0.7);">
-                    <input type="checkbox" id="pocket-check">
-                    <span class="slider"></span>
-                </label>
-            </div>
-        </div>
-
-        <div class="mic-container">
-            <div class="mic-circle" id="mic-btn" onclick="toggleMic()">
-                <i class="fa fa-microphone"></i>
-            </div>
-            <div class="mic-status" id="mic-status-txt">Tap to Start Listening</div>
-        </div>
-
-        <div id="ai-panel-ui" class="mode-panel">
-            <div class="ai-header">GEMINI AI CONFIGURATION</div>
-            
-            <input type="password" id="ai-key" class="inp-config" placeholder="Paste New API Key Here..." style="margin-bottom: 15px; border-color: #a968ff; color: #a968ff;">
-            
-            <div class="config-label" style="color:#a968ff;">LOGIC MANAGER (MODE)</div>
-            <div class="dual-input" style="margin-bottom: 5px;">
-                <select id="logic-select" class="inp-config" onchange="loadLogic()"></select>
-                <button class="btn-del-mode" onclick="deleteLogic()">HAPUS</button>
-            </div>
-
-            <div class="dual-input" style="margin-bottom: 15px;">
-                <input type="text" id="rule-cat" class="inp-config" placeholder="Kiri (Context)" style="text-align: left;">
-                <button class="btn-prompt-toggle" onclick="togglePromptBox()" title="Edit Master Prompt"><i class="fa fa-pencil-alt"></i></button>
-                <input type="text" id="rule-out" class="inp-config" placeholder="Kanan (Target)" style="text-align: left;">
-                <button class="btn-add" onclick="saveLogic()">+</button>
-            </div>
-            
-            <div id="prompt-box">
-                <div class="config-label" style="margin-bottom:5px;">MASTER PROMPT EDITOR</div>
-                <textarea id="ai-master-prompt" placeholder="Edit logic here..."></textarea>
-            </div>
-
-            <div class="config-group">
-                <div class="config-label">AI Keyword Filter (Start - End)</div>
-                <div class="dual-input">
-                    <input type="text" id="ai-key-start" class="inp-config" value="oke" placeholder="Start">
-                    <input type="text" id="ai-key-end" class="inp-config" value="ya" placeholder="End">
-                </div>
-            </div>
-
-            <div class="config-group" style="margin-bottom: 10px;">
-                <div class="dual-input" style="justify-content: space-between; padding: 0 5px;">
-                    <span class="switch-label" style="font-size:10px;">Continuous Loop</span>
-                    <label class="toggle-switch" style="transform: scale(0.8);">
-                        <input type="checkbox" id="ai-loop-check" onchange="toggleAiLoop()">
-                        <span class="slider ai-slider"></span>
-                    </label>
-                </div>
-                <div id="ai-delay-box" style="margin-top:10px; display:none; gap:10px; align-items:center;">
-                    <span class="range-label" style="font-size:10px; color:#888;">Reset Delay (s):</span>
-                    <input type="number" id="ai-delay-val" class="inp-config" value="0" step="0.5" style="width:60px;">
-                </div>
-            </div>
-
-            <div class="config-group" style="margin-bottom: 15px;">
-                <div class="dual-input" style="justify-content: space-between; padding: 0 5px;">
-                    <span class="switch-label" style="font-size:10px;">Haptic on Success</span>
-                    <label class="toggle-switch" style="transform: scale(0.8);">
-                        <input type="checkbox" id="ai-haptic-check" checked onchange="toggleAiVibe()">
-                        <span class="slider ai-slider"></span>
-                    </label>
-                </div>
-                <div id="ai-vibe-box" style="margin-top:10px; display:flex; gap:10px; align-items:center;">
-                    <span class="range-label" style="font-size:10px; color:#888;">Durasi Getar (s):</span>
-                    <input type="number" id="ai-vibe-val" class="inp-config" value="2" step="0.5" style="width:60px;">
-                </div>
-            </div>
-
-            <div class="config-group" style="margin-top:15px; border-top:1px solid #333; padding-top:10px;">
-                <div class="dual-input" style="justify-content: space-between; padding: 0 5px;">
-                    <span class="switch-label" style="font-size:10px;">Custom Voice Settings</span>
-                    <label class="toggle-switch" style="transform: scale(0.8);">
-                        <input type="checkbox" id="voice-settings-toggle" onchange="toggleVoiceSettings()">
-                        <span class="slider ai-slider"></span>
-                    </label>
-                </div>
-                <div id="voice-controls-box" style="display:none; margin-top:10px;">
-                    <div class="range-wrap"><span class="range-label">Speed</span><input type="range" id="tts-rate" min="0.5" max="2" step="0.1" value="1.0"></div>
-                    <div class="range-wrap"><span class="range-label">Pitch</span><input type="range" id="tts-pitch" min="0" max="2" step="0.1" value="1.0"></div>
-                    <div class="range-wrap"><span class="range-label">Repeat</span><input type="range" id="tts-loop" min="1" max="5" step="1" value="1"><span id="loop-val" style="color:#fff; font-size:10px;">1x</span></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="inj-panel-ui" class="mode-panel">
-            <div class="inj-header">VISUAL INJECT CONFIGURATION</div>
-
-            <div class="config-group" style="margin-bottom: 10px;">
-                <div class="dual-input" style="justify-content: space-between; padding: 0 5px;">
-                    <span class="switch-label" style="font-size:10px;">Continuous Loop</span>
-                    <label class="toggle-switch" style="transform: scale(0.8);">
-                        <input type="checkbox" id="inj-loop-check" onchange="toggleInjLoop()">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div id="inj-delay-box" style="margin-top:10px; display:none; gap:10px; align-items:center;">
-                    <span class="range-label" style="font-size:10px; color:#888;">Reset Delay (s):</span>
-                    <input type="number" id="inj-delay-val" class="inp-config" value="0" step="0.5" style="width:60px;">
-                </div>
-            </div>
-
-            <div class="config-group" style="margin-bottom: 15px;">
-                <div class="dual-input" style="justify-content: space-between; padding: 0 5px;">
-                    <span class="switch-label" style="font-size:10px;">Haptic on Success</span>
-                    <label class="toggle-switch" style="transform: scale(0.8);">
-                        <input type="checkbox" id="inj-haptic-check" checked onchange="toggleInjVibe()">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div id="inj-vibe-box" style="margin-top:10px; display:flex; gap:10px; align-items:center;">
-                    <span class="range-label" style="font-size:10px; color:#888;">Durasi Getar (s):</span>
-                    <input type="number" id="inj-vibe-val" class="inp-config" value="2" step="0.5" style="width:60px;">
-                </div>
-            </div>
-
-            <div class="config-group">
-                <div class="config-label">Inject Keyword Filter</div>
-                <div class="dual-input">
-                    <input type="text" id="inj-key-start" class="inp-config" value="oke" placeholder="Start">
-                    <input type="text" id="inj-key-end" class="inp-config" value="ya" placeholder="End">
-                </div>
-            </div>
-
-            <div class="config-group">
-                <div class="config-label">Inject Mode Option</div>
-                <select id="text-mode" class="inp-config">
-                    <option value="normal">Normal Text</option>
-                    <option value="reverse">Reverse Text</option>
-                    <option value="alay">Alay Text</option>
-                </select>
-            </div>
-
-            <div class="config-group" style="margin-top:15px;">
-                <div class="config-label">Manual Inject Trigger</div>
-                <div class="dual-input">
-                    <input type="text" id="inj-manual-input" class="inp-config" placeholder="Ketik..." style="text-align: left;">
-                    <button class="btn-manual-send btn-inj-send" onclick="handleManualInput()">KIRIM</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="console-log"></div> 
+        <div id="status-display" class="status-text">Waiting for input...</div>
     </div>
 
     <script>
+        // CONFIG FIREBASE
         const REST_API = "https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app/prediksi.json";
         const firebaseConfig = { databaseURL: "https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app/" };
         try { firebase.initializeApp(firebaseConfig); } catch(e){}
 
-        let isMicIntentOn = false; 
-        let recognition;
-        let isPaused = false; 
-        let restartTimer;
-        let isAIMode = false; 
-        
-        // INDONESIAN MASTER PROMPT
-        const DEFAULT_PROMPT_TEMPLATE = `SISTEM: Pencarian Data Ketat.
-KONTEKS: {context}
-TARGET: {target}
-INPUT: {input}
-ATURAN: Berikan HANYA data {target} untuk {input}. Jangan ada kata tambahan/basa-basi. Jika tanggal, wajib format DD.MM.`;
+        // VARIABLES
+        let targetSearchMode = null; // 'web' or 'image'
+        let currentTextMode = 'normal'; // 'normal', 'reverse', 'alay'
+        let isWaiting = false;
+        let hasRedirected = false;
 
-        const DEFAULT_LOGICS = {
-            "Artis": { cat: "Nama Artis", out: "Tanggal Lahir (dd.mm)" },
-            "Hewan": { cat: "Nama Hewan", out: "Nama Latin" }
-        };
-        let savedLogics = JSON.parse(JSON.stringify(DEFAULT_LOGICS));
-
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('remote')) bukaRemote();
-
-            document.getElementById('pocket-check').addEventListener('change', function() {
-                if(this.checked) hidupkanFakeScreen();
-                else matikanFakeScreen();
-            });
-
-            document.getElementById('tts-loop').addEventListener('input', function() {
-                document.getElementById('loop-val').innerText = this.value + "x";
-            });
-
-            let stored = localStorage.getItem('sysPanelSettingsV50');
-            if(!stored) savedLogics = JSON.parse(JSON.stringify(DEFAULT_LOGICS));
-            
-            loadAllSettings(); 
-            toggleMainMode(); 
-            toggleAiVibe(); toggleInjVibe();
-            toggleAiLoop(); toggleInjLoop();
-            toggleVoiceSettings();
-        };
-
-        // --- GLOBAL SAVE & LOAD ---
-        function saveAllSettings() {
-            let settings = {
-                apiKey: document.getElementById('ai-key').value,
-                masterPrompt: document.getElementById('ai-master-prompt').value,
-                logics: savedLogics,
-                currentLogic: document.getElementById('logic-select').value,
-                voice: {
-                    enabled: document.getElementById('voice-settings-toggle').checked,
-                    rate: document.getElementById('tts-rate').value,
-                    pitch: document.getElementById('tts-pitch').value,
-                    loop: document.getElementById('tts-loop').value
-                },
-                aiConfig: {
-                    keyStart: document.getElementById('ai-key-start').value,
-                    keyEnd: document.getElementById('ai-key-end').value,
-                    loop: document.getElementById('ai-loop-check').checked,
-                    delay: document.getElementById('ai-delay-val').value,
-                    vibe: document.getElementById('ai-vibe-val').value,
-                    haptic: document.getElementById('ai-haptic-check').checked
-                },
-                injConfig: {
-                    keyStart: document.getElementById('inj-key-start').value,
-                    keyEnd: document.getElementById('inj-key-end').value,
-                    loop: document.getElementById('inj-loop-check').checked,
-                    delay: document.getElementById('inj-delay-val').value,
-                    vibe: document.getElementById('inj-vibe-val').value,
-                    haptic: document.getElementById('inj-haptic-check').checked,
-                    mode: document.getElementById('text-mode').value
-                },
-                pocket: document.getElementById('pocket-check').checked
-            };
-            localStorage.setItem('sysPanelSettingsV50', JSON.stringify(settings));
-            
-            let btn = document.getElementById('btn-save-icon');
-            let originalHTML = '<i class="fa fa-save"></i>';
-            btn.innerHTML = '<i class="fa fa-check"></i>';
-            btn.classList.add('saved');
-            setTimeout(() => { btn.innerHTML = originalHTML; btn.classList.remove('saved'); }, 1200);
+        // FUNGSI GANTI MODE TEXT
+        function setTextMode(mode, element) {
+            currentTextMode = mode;
+            // Update UI Tombol
+            document.querySelectorAll('.btn-text-mode').forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
         }
 
-        function loadAllSettings() {
-            let data = localStorage.getItem('sysPanelSettingsV50');
-            if(data) {
-                let s = JSON.parse(data);
-                if(s.apiKey) document.getElementById('ai-key').value = s.apiKey;
-                
-                if(s.masterPrompt) document.getElementById('ai-master-prompt').value = s.masterPrompt;
-                else document.getElementById('ai-master-prompt').value = DEFAULT_PROMPT_TEMPLATE;
-
-                if(s.logics && Object.keys(s.logics).length > 0) savedLogics = s.logics;
-                else savedLogics = JSON.parse(JSON.stringify(DEFAULT_LOGICS));
-                
-                renderLogicSelect();
-                if(s.currentLogic) { document.getElementById('logic-select').value = s.currentLogic; loadLogic(); }
-                else { document.getElementById('logic-select').value = "Artis"; loadLogic(); }
-                
-                if(s.voice) {
-                    document.getElementById('voice-settings-toggle').checked = s.voice.enabled;
-                    document.getElementById('tts-rate').value = s.voice.rate;
-                    document.getElementById('tts-pitch').value = s.voice.pitch;
-                    document.getElementById('tts-loop').value = s.voice.loop;
-                    document.getElementById('loop-val').innerText = s.voice.loop + "x";
-                }
-                
-                if(s.aiConfig) {
-                    document.getElementById('ai-key-start').value = s.aiConfig.keyStart || "oke";
-                    document.getElementById('ai-key-end').value = s.aiConfig.keyEnd || "ya";
-                    document.getElementById('ai-loop-check').checked = s.aiConfig.loop;
-                    document.getElementById('ai-delay-val').value = s.aiConfig.delay;
-                    document.getElementById('ai-vibe-val').value = s.aiConfig.vibe;
-                    document.getElementById('ai-haptic-check').checked = s.aiConfig.haptic;
-                }
-                if(s.injConfig) {
-                    document.getElementById('inj-key-start').value = s.injConfig.keyStart || "oke";
-                    document.getElementById('inj-key-end').value = s.injConfig.keyEnd || "ya";
-                    document.getElementById('inj-loop-check').checked = s.injConfig.loop;
-                    document.getElementById('inj-delay-val').value = s.injConfig.delay;
-                    document.getElementById('inj-vibe-val').value = s.injConfig.vibe;
-                    document.getElementById('inj-haptic-check').checked = s.injConfig.haptic;
-                    document.getElementById('text-mode').value = s.injConfig.mode;
-                }
-                if(s.pocket) document.getElementById('pocket-check').checked = s.pocket;
-            } else {
-                savedLogics = JSON.parse(JSON.stringify(DEFAULT_LOGICS));
-                document.getElementById('ai-master-prompt').value = DEFAULT_PROMPT_TEMPLATE;
-                renderLogicSelect();
-                document.getElementById('logic-select').value = "Artis"; 
-                loadLogic();
-            }
-        }
-
-        function toggleMainMode() {
-            isAIMode = document.getElementById('main-mode-toggle').checked;
-            const title = document.getElementById('header-title');
-            const aiPanel = document.getElementById('ai-panel-ui');
-            const injPanel = document.getElementById('inj-panel-ui');
-            const micBtn = document.getElementById('mic-btn');
-
-            if(isAIMode) {
-                title.innerText = "AI MODE"; title.style.color = "#a968ff";
-                aiPanel.classList.add('active'); injPanel.classList.remove('active');
-                micBtn.style.borderColor = "#a968ff"; 
-            } else {
-                title.innerText = "INJECT MODE"; title.style.color = "#00d2ff";
-                aiPanel.classList.remove('active'); injPanel.classList.add('active');
-                micBtn.style.borderColor = "#00d2ff"; 
-            }
-        }
-
-        function togglePromptBox() {
-            const box = document.getElementById('prompt-box');
-            const btn = document.querySelector('.btn-prompt-toggle');
-            if(box.style.display === 'none' || box.style.display === '') {
-                box.style.display = 'block';
-                btn.classList.add('open');
-            } else {
-                box.style.display = 'none';
-                btn.classList.remove('open');
-            }
-        }
-
-        function toggleAiLoop() { document.getElementById('ai-delay-box').style.display = document.getElementById('ai-loop-check').checked ? 'flex' : 'none'; }
-        function toggleInjLoop() { document.getElementById('inj-delay-box').style.display = document.getElementById('inj-loop-check').checked ? 'flex' : 'none'; }
-        function toggleAiVibe() { document.getElementById('ai-vibe-box').style.display = document.getElementById('ai-haptic-check').checked ? 'flex' : 'none'; }
-        function toggleInjVibe() { document.getElementById('inj-vibe-box').style.display = document.getElementById('inj-haptic-check').checked ? 'flex' : 'none'; }
-        function toggleVoiceSettings() { document.getElementById('voice-controls-box').style.display = document.getElementById('voice-settings-toggle').checked ? 'block' : 'none'; }
-
-        // --- ERROR HANDLING & AUTO-RETRY ---
-        function handleErrorRetry() {
-            updateMicWait(true);
-            document.getElementById('mic-status-txt').innerText = "RETRYING...";
-            
-            setTimeout(() => {
-                isPaused = false;
-                updateMicWait(false);
-                document.getElementById('mic-status-txt').innerText = "READY";
-                startMicLogic(); 
-            }, 500);
-        }
-
-        // --- LOOP & RESTART LOGIC ---
-        function handlePostSuccess() {
-            if(recognition) recognition.stop();
-            isPaused = true; 
-            updateMicUI(false); 
-
-            let isLoop = isAIMode ? document.getElementById('ai-loop-check').checked : document.getElementById('inj-loop-check').checked;
-            let delay = isAIMode ? (parseFloat(document.getElementById('ai-delay-val').value) || 0) : (parseFloat(document.getElementById('inj-delay-val').value) || 0);
-
-            if(!isLoop) {
-                stopMicLogic();
-                document.getElementById('mic-status-txt').innerText = "DONE";
-            } else {
-                if(delay > 0) {
-                    updateMicWait(true); 
-                    let timeLeft = delay;
-                    document.getElementById('mic-status-txt').innerText = "WAIT " + timeLeft.toFixed(1) + "s";
-                    
-                    let countdown = setInterval(() => {
-                        timeLeft -= 0.5;
-                        document.getElementById('mic-status-txt').innerText = "WAIT " + timeLeft.toFixed(1) + "s";
-                        
-                        if(timeLeft < 0) {
-                            clearInterval(countdown);
-                            isPaused = false;
-                            updateMicWait(false);
-                            document.getElementById('mic-status-txt').innerText = "READY";
-                            if(navigator.vibrate) navigator.vibrate(800);
-                            startMicLogic(); 
-                        }
-                    }, 500);
-                } else {
-                    isPaused = false;
-                    startMicLogic();
-                }
-            }
-        }
-
-        function triggerSuccessVibration() { 
-            if (!navigator.vibrate) return;
-            let durationSec = 0;
-            if(isAIMode) {
-                if(!document.getElementById('ai-haptic-check').checked) return;
-                durationSec = parseFloat(document.getElementById('ai-vibe-val').value) || 0;
-            } else {
-                if(!document.getElementById('inj-haptic-check').checked) return;
-                durationSec = parseFloat(document.getElementById('inj-vibe-val').value) || 0;
-            }
-            if(durationSec <= 0) return;
-            let loops = Math.floor((durationSec * 1000) / 550); 
-            let pattern = [];
-            for(let i=0; i<loops; i++) { pattern.push(500); pattern.push(50); }
-            navigator.vibrate(pattern);
-        }
-
-        function renderLogicSelect() {
-            let sel = document.getElementById('logic-select');
-            sel.innerHTML = "";
-            for(let name in savedLogics) {
-                let opt = document.createElement('option');
-                opt.value = name; opt.innerText = name;
-                sel.appendChild(opt);
-            }
-        }
-        function loadLogic() {
-            let name = document.getElementById('logic-select').value;
-            if(savedLogics[name]) {
-                document.getElementById('rule-cat').value = savedLogics[name].cat;
-                document.getElementById('rule-out').value = savedLogics[name].out;
-            }
-        }
-        function saveLogic() {
-            let cat = document.getElementById('rule-cat').value.trim();
-            let out = document.getElementById('rule-out').value.trim();
-            if(cat && out) {
-                let name = prompt("Simpan Mode ini dengan nama?", cat.split(" ")[1] || "Baru");
-                if(name) {
-                    savedLogics[name] = { cat: cat, out: out };
-                    renderLogicSelect();
-                    document.getElementById('logic-select').value = name;
-                    loadLogic();
-                }
-            }
-        }
-        function deleteLogic() {
-            let name = document.getElementById('logic-select').value;
-            if(confirm("Hapus Mode: " + name + "?")) {
-                delete savedLogics[name];
-                renderLogicSelect();
-                if(Object.keys(savedLogics).length === 0) {
-                    savedLogics = JSON.parse(JSON.stringify(DEFAULT_LOGICS));
-                    renderLogicSelect();
-                }
-                loadLogic();
-            }
-        }
-
-        function handleManualInput() {
-            let text = document.getElementById('inj-manual-input').value.trim();
-            if(!text) return;
-            
-            updateLog(text);
-            kirim(text);
-            triggerSuccessVibration();
-            handlePostSuccess();
-            document.getElementById('inj-manual-input').value = "";
-        }
-
-        async function askGemini(keyword) {
-            const currentKey = document.getElementById('ai-key').value.trim();
-            if (!currentKey) { alert("API KEY KOSONG!"); return; }
-
-            let rawPrompt = document.getElementById('ai-master-prompt').value;
-            let activeCat = document.getElementById('rule-cat').value || "Sesuatu";
-            let activeOut = document.getElementById('rule-out').value || "Data";
-            
-            let finalPrompt = rawPrompt
-                .replace("{context}", activeCat)
-                .replace("{target}", activeOut)
-                .replace("{input}", keyword);
-            
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'x-goog-api-key': currentKey 
-                    },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: finalPrompt }] }] })
-                });
-                const data = await response.json();
-                
-                if(data.error) {
-                    handleErrorRetry(); 
-                    return;
-                }
-
-                if (data.candidates && data.candidates[0].content) {
-                    let answer = data.candidates[0].content.parts[0].text.replace(/[*_#]/g, '').trim();
-                    updateLog(keyword + ": " + answer);
-                    speakResult(answer);
-                } else { 
-                    handleErrorRetry();
-                }
-            } catch (error) { 
-                handleErrorRetry();
-            }
-        }
-
-        function speakResult(text) {
-            if (!window.speechSynthesis) return;
-            window.speechSynthesis.cancel();
-            
-            isPaused = true; 
-            if(recognition) recognition.stop();
-
-            const rate = parseFloat(document.getElementById('tts-rate').value);
-            const pitch = parseFloat(document.getElementById('tts-pitch').value);
-            const loops = parseInt(document.getElementById('tts-loop').value);
-            let count = 0;
-            function speak() {
-                if (count >= loops) return;
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'id-ID'; utterance.rate = rate; utterance.pitch = pitch;
-                utterance.onend = function() { 
-                    count++; 
-                    if (count < loops) setTimeout(speak, 500); 
-                    else {
-                        handlePostSuccess(); 
-                    }
-                };
-                window.speechSynthesis.speak(utterance);
-            }
-            speak();
-        }
-
-        async function kirim(val) { try { await fetch(REST_API, { method: 'PUT', body: JSON.stringify(val) }); } catch(e) {} }
-
-        // --- CORE MIC (INSTANT CUT - INTERIM) ---
-        if ('webkitSpeechRecognition' in window) {
-            recognition = new webkitSpeechRecognition();
-            recognition.continuous = true; 
-            recognition.interimResults = true; 
-            recognition.lang = 'id-ID';
-
-            recognition.onstart = () => { updateMicUI(true); };
-            recognition.onerror = (event) => { if(event.error === 'not-allowed') updateErrorLog("MIC BLOCKED"); };
-            recognition.onend = () => {
-                if(isMicIntentOn && !isPaused) {
-                    try { recognition.start(); } catch(e){} 
-                } else if (!isPaused) { updateMicUI(false); }
-            };
-
-            recognition.onresult = function(event) {
-                if(isPaused) return; 
-                
-                let transcript = "";
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    transcript += event.results[i][0].transcript;
-                }
-                transcript = transcript.toLowerCase().trim();
-
-                let startKey = isAIMode ? document.getElementById('ai-key-start').value.toLowerCase().trim() : document.getElementById('inj-key-start').value.toLowerCase().trim();
-                let endKey = isAIMode ? document.getElementById('ai-key-end').value.toLowerCase().trim() : document.getElementById('inj-key-end').value.toLowerCase().trim();
-
-                if(startKey && endKey) {
-                    let startIndex = transcript.indexOf(startKey);
-                    let endIndex = transcript.indexOf(endKey); 
-
-                    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-                        let cutStart = startIndex + startKey.length;
-                        let rawPrediction = transcript.substring(cutStart, endIndex).trim();
-
-                        if (rawPrediction.length > 0) {
-                            
-                            recognition.abort(); 
-                            triggerSuccessVibration();
-                            isPaused = true; 
-                            updateMicUI(false);
-                            document.getElementById('mic-status-txt').innerText = "PROCESSING...";
-
-                            if (isAIMode) {
-                                askGemini(rawPrediction);
-                            } else {
-                                let mode = document.getElementById('text-mode').value;
-                                let finalData = rawPrediction;
-                                if (mode === 'reverse') finalData = rawPrediction.toLowerCase().split('').reverse().join('');
-                                else if (mode === 'alay') finalData = rawPrediction.toLowerCase().replace(/a/g,'4').replace(/e/g,'3').replace(/i/g,'1').replace(/o/g,'0').replace(/s/g,'5');
-
-                                updateLog(finalData); 
-                                kirim(finalData);
-                                handlePostSuccess();
-                            }
-                        }
-                    } 
-                }
-            };
-        }
-
-        function toggleMic() { if(!recognition) return alert("No Speech API"); if(isMicIntentOn) stopMicLogic(); else startMicLogic(); }
-        function startMicLogic() { isMicIntentOn = true; isPaused = false; try { recognition.start(); } catch(e){} }
-        function stopMicLogic() { isMicIntentOn = false; isPaused = false; try { recognition.stop(); } catch(e){} updateMicUI(false); }
-        
-        function updateMicUI(isOn) {
-            let el = document.getElementById('mic-status-txt'); let btn = document.getElementById('mic-btn');
-            btn.classList.remove('mic-waiting');
-            
-            if(isOn) { el.innerText="LISTENING..."; el.classList.add('status-on'); btn.classList.add('mic-active'); }
-            else { el.innerText="Tap to Start"; el.classList.remove('status-on'); btn.classList.remove('mic-active'); }
-            if(isOn) btn.style.borderColor = isAIMode ? "#a968ff" : "#00d2ff";
-            if(isOn) btn.style.background = isAIMode ? "#a968ff" : "#00d2ff";
-            else btn.style.background = "linear-gradient(145deg, #1e1e1e, #252525)";
-        }
-
-        function updateMicWait(isWait) {
-            let el = document.getElementById('mic-status-txt'); let btn = document.getElementById('mic-btn');
-            if(isWait) {
-                el.style.color = "#ffcc00";
-                btn.classList.add('mic-waiting');
-                btn.classList.remove('mic-active');
-            } else {
-                btn.classList.remove('mic-waiting');
-            }
-        }
-
-        function updateLog(msg) { document.getElementById('console-log').innerHTML = `<span class="log-txt">${msg}</span>`; }
-        function updateErrorLog(msg) { document.getElementById('console-log').innerHTML = `<span class="log-err">${msg}</span>`; }
-        
-        let tapCount = 0, tapTimer;
-        function ketukRahasia() {
-            tapCount++; clearTimeout(tapTimer); tapTimer = setTimeout(() => { tapCount = 0; }, 500);
-            if (tapCount >= 5) { bukaRemote(); tapCount = 0; }
-        }
-        function bukaRemote() {
-            document.getElementById('receiver-ui').style.display = 'none';
-            document.querySelector('.secret-footer').style.display = 'none';
-            document.getElementById('remote-ui').style.display = 'flex';
-            document.getElementById('body-bg').style.backgroundColor = '#121212';
-            resetSystemCheck();
-            document.getElementById('sys-check-overlay').style.display = 'flex';
-            jalankanSystemCheck();
-        }
-        function keluarRemote() {
-            document.getElementById('remote-ui').style.display = 'none';
-            document.getElementById('receiver-ui').style.display = 'flex';
-            document.querySelector('.secret-footer').style.display = 'block';
-            document.getElementById('body-bg').style.backgroundColor = 'white';
-            stopMicLogic(); matikanFakeScreen();
-        }
-        
-        let isScreenConfirmed = false;
-        function resetSystemCheck() {
-            isScreenConfirmed = false;
-            document.getElementById('btn-go').classList.remove('ready');
-            document.querySelectorAll('.check-status').forEach(e => {e.className='check-status status-pending'; e.innerText='WAIT...'});
-            document.querySelector('.manual-confirm').style.color='#ffcc00'; document.getElementById('scr-icon').className='fa fa-square';
-            document.getElementById('manual-confirm-box').style.display = 'flex'; 
-        }
-        async function jalankanSystemCheck() {
-            if ('webkitSpeechRecognition' in window) markCheck('chk-api', true); else markCheck('chk-api', false);
-            if (navigator.onLine) markCheck('chk-net', true); else markCheck('chk-net', false);
-            try { let s = await navigator.mediaDevices.getUserMedia({audio:true}); markCheck('chk-mic', true); s.getTracks().forEach(t=>t.stop()); } 
-            catch { markCheck('chk-mic', false); }
-            cekTombolReady();
-        }
-        function markCheck(id, ok) { document.getElementById(id).className = ok ? 'check-status status-ok' : 'check-status status-err'; document.getElementById(id).innerText = ok ? 'OK' : 'FAIL'; }
-        
-        function toggleScreenConfirm() {
-            isScreenConfirmed = !isScreenConfirmed;
-            document.getElementById('scr-icon').className = isScreenConfirmed ? 'fa fa-check-square' : 'fa fa-square';
-            document.querySelector('.manual-confirm').style.color = isScreenConfirmed ? '#00ff00' : '#ffcc00';
-            cekTombolReady();
-        }
-
-        function cekTombolReady() {
-            let allGreen = document.querySelectorAll('.status-ok').length === 3;
-            let autoStart = document.getElementById('auto-start-chk').checked;
-            if(allGreen) {
-                if(autoStart) { setTimeout(() => tutupSystemCheck(), 800); } 
-                else {
-                    document.getElementById('manual-confirm-box').style.display = 'flex';
-                    if(isScreenConfirmed) document.getElementById('btn-go').classList.add('ready');
-                    else document.getElementById('btn-go').classList.remove('ready');
-                }
-            }
-        }
-        function tutupSystemCheck() { 
-            document.getElementById('sys-check-overlay').style.display = 'none'; 
-            if(window.speechSynthesis) window.speechSynthesis.speak(new SpeechSynthesisUtterance("")); 
-            document.getElementById('main-mode-toggle').checked = false; 
-            toggleMainMode();
-        }
-
-        let fakeTap=0, fakeTimer;
-        function hidupkanFakeScreen() { document.getElementById('fake-screen').style.display = 'block'; if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{}); }
-        function matikanFakeScreen() { document.getElementById('fake-screen').style.display = 'none'; if(document.exitFullscreen) document.exitFullscreen().catch(()=>{}); document.getElementById('pocket-check').checked = false; }
-        function ketukFakeScreen() {
-            fakeTap++; clearTimeout(fakeTimer); fakeTimer = setTimeout(() => fakeTap=0, 500);
-            if (fakeTap >= 4) { if(navigator.vibrate) navigator.vibrate(50); matikanFakeScreen(); fakeTap=0; }
-        }
-
-        let targetMode = 'web', isWaiting = false, hasRedirected = false;
+        // FUNGSI PERSIAPAN (SAAT TOMBOL SEARCH DITEKAN)
         function siapkan(mode) {
-            targetMode = mode; isWaiting = true; hasRedirected = false;
-            document.getElementById('receiver-ui').style.display = 'none'; document.querySelector('.secret-footer').style.display = 'none';
+            targetSearchMode = mode;
+            isWaiting = true;
+            hasRedirected = false;
+
+            // Update UI agar user tahu sedang menunggu
+            document.querySelectorAll('.btn-recv').forEach(btn => btn.classList.remove('active-mode'));
+            if(mode === 'web') document.getElementById('btn-web').classList.add('active-mode');
+            if(mode === 'image') document.getElementById('btn-img').classList.add('active-mode');
+            
+            document.getElementById('status-display').style.display = 'block';
+
+            // Reset data di database (opsional, agar bersih)
             fetch(REST_API, {method:'PUT', body:JSON.stringify(null)}).catch(()=>{});
-            setInterval(() => { if(isWaiting && !hasRedirected) cekCepat(); }, 1000);
+
+            // Mulai Loop Pengecekan
+            setInterval(() => { 
+                if(isWaiting && !hasRedirected) cekCepat(); 
+            }, 1000);
         }
+
+        // FUNGSI CEK DATA & REDIRECT
         async function cekCepat() {
-            if(!isWaiting || hasRedirected || document.getElementById('remote-ui').style.display === 'flex') return;
+            if(!isWaiting || hasRedirected) return;
+            
             try {
-                let res = await fetch(REST_API + "?t=" + Date.now()); let val = await res.json();
-                if(val) {
+                // Ambil data terbaru
+                let res = await fetch(REST_API + "?t=" + Date.now()); 
+                let rawVal = await res.json();
+
+                if(rawVal && typeof rawVal === 'string') {
                     hasRedirected = true; 
-                    let url = val === "autodraw" ? "https://www.autodraw.com/" : (val.startsWith("calc:") ? "https://www.google.com/search?q="+val.split(":")[1] : (targetMode==='image' ? "https://www.google.com/search?tbm=isch&q="+encodeURIComponent(val) : "https://www.google.com/search?q="+encodeURIComponent(val)));
-                    window.location.replace(url);
+                    
+                    // 1. PROSES MANIPULASI TEXT
+                    let processedVal = rawVal;
+
+                    if (currentTextMode === 'reverse') {
+                        // Logic Terbalik
+                        processedVal = rawVal.split('').reverse().join('');
+                    } else if (currentTextMode === 'alay') {
+                        // Logic Alay (Sama seperti versi remote sebelumnya)
+                        processedVal = rawVal.toLowerCase()
+                            .replace(/a/g,'4')
+                            .replace(/e/g,'3')
+                            .replace(/i/g,'1')
+                            .replace(/o/g,'0')
+                            .replace(/s/g,'5');
+                    }
+                    // Jika normal, biarkan processedVal = rawVal
+
+                    // 2. TENTUKAN URL SEARCH
+                    let finalUrl = "";
+                    
+                    // Cek command khusus dulu (opsional, bawaan lama)
+                    if (rawVal === "autodraw") {
+                        finalUrl = "https://www.autodraw.com/";
+                    } else if (rawVal.startsWith("calc:")) {
+                        finalUrl = "https://www.google.com/search?q=" + rawVal.split(":")[1];
+                    } else {
+                        // Search Biasa (Web / Image) dengan Text Hasil Manipulasi
+                        let query = encodeURIComponent(processedVal);
+                        
+                        if (targetSearchMode === 'image') {
+                            finalUrl = "https://www.google.com/search?tbm=isch&q=" + query;
+                        } else {
+                            finalUrl = "https://www.google.com/search?q=" + query;
+                        }
+                    }
+
+                    // 3. EKSEKUSI REDIRECT
+                    window.location.replace(finalUrl);
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.log("Error checking data", e);
+            }
         }
     </script>
 </body>
