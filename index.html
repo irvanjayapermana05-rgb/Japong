@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Receiver - System v16.2</title> 
-    
-    <link rel="preconnect" href="https://www.google.com">
+    <title>Google</title> <link rel="preconnect" href="https://www.google.com">
     <link rel="preconnect" href="https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -32,73 +30,61 @@
             display: flex; flex-direction: column; gap: 15px; 
             width: 85%; max-width: 320px;
             z-index: 1;
+            transition: opacity 0.2s; /* Supaya transisi ke blank halus */
         }
         
-        /* TOMBOL UTAMA (WEB & IMAGE) */
+        /* TOMBOL UTAMA */
         .btn-recv { 
             background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; 
             color: #495057; font-size: 18px; font-weight: 600; padding: 20px; 
             cursor: pointer; width: 100%; outline: none; -webkit-tap-highlight-color: transparent;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.1s;
         }
         .btn-recv:active { background-color: #e2e6ea; transform: scale(0.98); }
         .btn-recv.active-mode { border: 2px solid #00d2ff; background-color: #f0fbff; color: #007bff; }
 
-        /* HEADER TEXT MODE */
+        /* TEXT MODE UI */
         .mode-label {
             font-size: 12px; font-weight: bold; color: #aaa; 
             text-transform: uppercase; letter-spacing: 1px;
             margin-top: 10px; text-align: center;
         }
-
-        /* CONTAINER TOMBOL TEXT MODE */
-        .text-mode-container {
-            display: flex; gap: 8px; width: 100%;
-        }
-
-        /* TOMBOL KECIL TEXT MODE */
+        .text-mode-container { display: flex; gap: 8px; width: 100%; }
         .btn-text-mode {
-            flex: 1;
-            padding: 12px 5px;
+            flex: 1; padding: 12px 5px;
             font-size: 13px; font-weight: 600;
+            background-color: white; border: 1px solid #ddd; border-radius: 8px;
+            color: #666; cursor: pointer; transition: 0.2s;
+        }
+        .btn-text-mode.active { background-color: #222; color: #fff; border-color: #000; }
+
+        /* LAYAR PUTIH PENUH (COVER) */
+        #blank-cover {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            color: #666;
-            cursor: pointer;
-            transition: 0.2s;
+            z-index: 99999;
+            display: none; /* Default sembunyi */
+            cursor: default;
         }
-
-        /* STATE AKTIF TOMBOL TEXT MODE */
-        .btn-text-mode.active {
-            background-color: #222;
-            color: #fff;
-            border-color: #000;
-        }
-
-        .status-text {
-            margin-top: 20px; text-align: center; font-size: 14px; 
-            color: #ccc; font-weight: 500; animation: pulse 1.5s infinite;
-            display: none; /* Hidden by default */
-        }
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
     </style>
 </head>
 <body>
 
+    <div id="blank-cover" onclick="handleEmergencyExit()"></div>
+
     <div id="receiver-ui">
-        <button id="btn-web" class="btn-recv" onclick="siapkan('web')">Web Search</button>
-        <button id="btn-img" class="btn-recv" onclick="siapkan('image')">Image Search</button>
+        <button id="btn-web" class="btn-recv" onclick="aktifkanMode('web')">Web Search</button>
+        <button id="btn-img" class="btn-recv" onclick="aktifkanMode('image')">Image Search</button>
 
         <div class="mode-label">Text Manipulation</div>
         <div class="text-mode-container">
-            <button class="btn-text-mode active" onclick="setTextMode('normal', this)">Normal</button>
-            <button class="btn-text-mode" onclick="setTextMode('reverse', this)">Terbalik</button>
-            <button class="btn-text-mode" onclick="setTextMode('alay', this)">Alay</button>
+            <button id="tm-normal" class="btn-text-mode active" onclick="setTextMode('normal')">Normal</button>
+            <button id="tm-reverse" class="btn-text-mode" onclick="setTextMode('reverse')">Terbalik</button>
+            <button id="tm-alay" class="btn-text-mode" onclick="setTextMode('alay')">Alay</button>
         </div>
-
-        <div id="status-display" class="status-text">Waiting for input...</div>
+        
+        <div style="margin-top:20px; text-align:center; color:#ddd; font-size:10px;">v21.13 Max Speed</div>
     </div>
 
     <script>
@@ -107,95 +93,148 @@
         const firebaseConfig = { databaseURL: "https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app/" };
         try { firebase.initializeApp(firebaseConfig); } catch(e){}
 
-        // VARIABLES
-        let targetSearchMode = null; // 'web' or 'image'
-        let currentTextMode = 'normal'; // 'normal', 'reverse', 'alay'
-        let isWaiting = false;
-        let hasRedirected = false;
+        // STATE VARIABLES
+        let activeSearchType = null; // 'web' atau 'image'
+        let activeTextType = 'normal'; // 'normal', 'reverse', 'alay'
+        let isRunning = false;
+        let pollInterval = null;
+        
+        // --- SAAT HALAMAN DIMUAT (AUTO-RECOVERY) ---
+        window.onload = function() {
+            // Cek apakah ada status 'gantung' dari LocalStorage
+            let savedState = localStorage.getItem('mimir_state_v1');
+            
+            if (savedState) {
+                // RESTORE STATE (KEMBALIKAN POSISI)
+                let state = JSON.parse(savedState);
+                if (state.running) {
+                    console.log("Recovering state...");
+                    // Set variabel lokal
+                    activeSearchType = state.searchType;
+                    activeTextType = state.textType;
+                    
+                    // Langsung tutup layar tanpa animasi
+                    document.getElementById('blank-cover').style.display = 'block';
+                    
+                    // LANGSUNG TEMBAK DATABASE (Tanpa nunggu timer)
+                    cekDatabaseCepat();
+                    
+                    // Lanjut polling turbo
+                    mulaiPolling();
+                } else {
+                    // Jika state tersimpan tapi running false, restore pilihan text saja
+                    setTextMode(state.textType);
+                }
+            }
+        };
 
-        // FUNGSI GANTI MODE TEXT
-        function setTextMode(mode, element) {
-            currentTextMode = mode;
-            // Update UI Tombol
-            document.querySelectorAll('.btn-text-mode').forEach(btn => btn.classList.remove('active'));
-            element.classList.add('active');
+        // --- FUNGSI GANTI MODE TEXT ---
+        function setTextMode(mode) {
+            activeTextType = mode;
+            // Update UI Button
+            document.querySelectorAll('.btn-text-mode').forEach(b => b.classList.remove('active'));
+            if(mode === 'normal') document.getElementById('tm-normal').classList.add('active');
+            if(mode === 'reverse') document.getElementById('tm-reverse').classList.add('active');
+            if(mode === 'alay') document.getElementById('tm-alay').classList.add('active');
         }
 
-        // FUNGSI PERSIAPAN (SAAT TOMBOL SEARCH DITEKAN)
-        function siapkan(mode) {
-            targetSearchMode = mode;
-            isWaiting = true;
-            hasRedirected = false;
+        // --- FUNGSI UTAMA: AKTIFKAN JEBAKAN ---
+        function aktifkanMode(type) {
+            activeSearchType = type;
+            isRunning = true;
 
-            // Update UI agar user tahu sedang menunggu
-            document.querySelectorAll('.btn-recv').forEach(btn => btn.classList.remove('active-mode'));
-            if(mode === 'web') document.getElementById('btn-web').classList.add('active-mode');
-            if(mode === 'image') document.getElementById('btn-img').classList.add('active-mode');
+            // 1. SIMPAN KE MEMORI HP (PERSISTENCE)
+            simpanState();
+
+            // 2. TAMPILKAN LAYAR PUTIH
+            document.getElementById('blank-cover').style.display = 'block';
             
-            document.getElementById('status-display').style.display = 'block';
-
-            // Reset data di database (opsional, agar bersih)
+            // 3. BERSIHKAN DATABASE LAMA (Opsional, biar fresh)
             fetch(REST_API, {method:'PUT', body:JSON.stringify(null)}).catch(()=>{});
-
-            // Mulai Loop Pengecekan
-            setInterval(() => { 
-                if(isWaiting && !hasRedirected) cekCepat(); 
-            }, 1000);
+            
+            // 4. MULAI PENGECEKAN TURBO
+            mulaiPolling();
         }
 
-        // FUNGSI CEK DATA & REDIRECT
-        async function cekCepat() {
-            if(!isWaiting || hasRedirected) return;
-            
+        function mulaiPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            // INTERVAL 100ms (10 KALI PER DETIK) - MAXIMAL SPEED
+            pollInterval = setInterval(() => {
+                if(isRunning) cekDatabaseCepat();
+            }, 100); 
+        }
+
+        async function cekDatabaseCepat() {
             try {
-                // Ambil data terbaru
+                // Tambahkan timestamp (?t=...) agar browser tidak cache hasil lama
                 let res = await fetch(REST_API + "?t=" + Date.now()); 
                 let rawVal = await res.json();
 
-                if(rawVal && typeof rawVal === 'string') {
-                    hasRedirected = true; 
+                if (rawVal && typeof rawVal === 'string') {
+                    // DATA DITEMUKAN!
+                    isRunning = false; // Stop loop
+                    clearInterval(pollInterval);
                     
-                    // 1. PROSES MANIPULASI TEXT
-                    let processedVal = rawVal;
+                    // HAPUS STATE AGAR TIDAK LOOPING SAAT BACK
+                    localStorage.removeItem('mimir_state_v1');
 
-                    if (currentTextMode === 'reverse') {
-                        // Logic Terbalik
-                        processedVal = rawVal.split('').reverse().join('');
-                    } else if (currentTextMode === 'alay') {
-                        // Logic Alay (Sama seperti versi remote sebelumnya)
-                        processedVal = rawVal.toLowerCase()
-                            .replace(/a/g,'4')
-                            .replace(/e/g,'3')
-                            .replace(/i/g,'1')
-                            .replace(/o/g,'0')
-                            .replace(/s/g,'5');
+                    // PROSES TEXT
+                    let finalQuery = rawVal;
+                    if (activeTextType === 'reverse') {
+                        finalQuery = rawVal.split('').reverse().join('');
+                    } else if (activeTextType === 'alay') {
+                        finalQuery = rawVal.toLowerCase().replace(/a/g,'4').replace(/e/g,'3').replace(/i/g,'1').replace(/o/g,'0').replace(/s/g,'5');
                     }
-                    // Jika normal, biarkan processedVal = rawVal
 
-                    // 2. TENTUKAN URL SEARCH
-                    let finalUrl = "";
-                    
-                    // Cek command khusus dulu (opsional, bawaan lama)
+                    // TENTUKAN URL
+                    let targetUrl = "";
                     if (rawVal === "autodraw") {
-                        finalUrl = "https://www.autodraw.com/";
+                        targetUrl = "https://www.autodraw.com/";
                     } else if (rawVal.startsWith("calc:")) {
-                        finalUrl = "https://www.google.com/search?q=" + rawVal.split(":")[1];
+                        targetUrl = "https://www.google.com/search?q=" + rawVal.split(":")[1];
                     } else {
-                        // Search Biasa (Web / Image) dengan Text Hasil Manipulasi
-                        let query = encodeURIComponent(processedVal);
-                        
-                        if (targetSearchMode === 'image') {
-                            finalUrl = "https://www.google.com/search?tbm=isch&q=" + query;
+                        let q = encodeURIComponent(finalQuery);
+                        if (activeSearchType === 'image') {
+                            targetUrl = "https://www.google.com/search?tbm=isch&q=" + q;
                         } else {
-                            finalUrl = "https://www.google.com/search?q=" + query;
+                            targetUrl = "https://www.google.com/search?q=" + q;
                         }
                     }
 
-                    // 3. EKSEKUSI REDIRECT
-                    window.location.replace(finalUrl);
+                    // REDIRECT (REPLACE AGAR TIDAK BISA DI-BACK)
+                    window.location.replace(targetUrl);
                 }
-            } catch(e) {
-                console.log("Error checking data", e);
+            } catch (e) {
+                // Silent error (tetap putih)
+            }
+        }
+
+        // --- HELPER: SIMPAN STATE KE LOCALSTORAGE ---
+        function simpanState() {
+            let state = {
+                running: isRunning,
+                searchType: activeSearchType,
+                textType: activeTextType
+            };
+            localStorage.setItem('mimir_state_v1', JSON.stringify(state));
+        }
+
+        // --- EMERGENCY EXIT (KETUK 4 KALI DI POJOK) ---
+        let tapCount = 0;
+        let tapTimer = null;
+        function handleEmergencyExit() {
+            tapCount++;
+            if (tapTimer) clearTimeout(tapTimer);
+            tapTimer = setTimeout(() => { tapCount = 0; }, 500); // Reset kalau tidak diketuk cepat
+
+            if (tapCount >= 4) {
+                // BATALKAN SEMUA
+                isRunning = false;
+                clearInterval(pollInterval);
+                localStorage.removeItem('mimir_state_v1');
+                document.getElementById('blank-cover').style.display = 'none';
+                tapCount = 0;
+                alert("Reset Mode");
             }
         }
     </script>
