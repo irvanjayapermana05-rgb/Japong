@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
-        /* --- TAMPILAN SAMA PERSIS (TIDAK ADA YANG BERUBAH) --- */
+        /* --- TAMPILAN 100% SAMA --- */
         * { box-sizing: border-box; }
         
         body { 
@@ -78,7 +78,7 @@
             <button id="tm-alay" class="btn-text-mode" onclick="setTextMode('alay')">Alay</button>
         </div>
         
-        <div style="margin-top:20px; text-align:center; color:#ddd; font-size:10px;">v21.21 Reset On Open</div>
+        <div style="margin-top:20px; text-align:center; color:#ddd; font-size:10px;">v21.22 Secure Lock</div>
     </div>
 
     <script>
@@ -92,14 +92,12 @@
         let isRunning = false;
         let pollInterval = null;
         
-        // --- SAAT HALAMAN DIBUKA: RESET TOTAL (DATABASE & MEMORY) ---
+        // --- RESET SAAT DIBUKA ---
         window.onload = function() {
-            // 1. Hapus Memory di HP
             localStorage.removeItem('mimir_state_v1');
             setTextMode('normal');
-
-            // 2. HAPUS DATA DI DATABASE FIREBASE (RESET FULL)
-            // Ini menjamin saat Abang buka web ini, data lama MUSNAH.
+            
+            // Hapus data lama agar bersih (Fresh Start)
             fetch(REST_API, {method:'PUT', body:JSON.stringify(null)}).catch(()=>{});
         };
 
@@ -111,15 +109,11 @@
             if(mode === 'alay') document.getElementById('tm-alay').classList.add('active');
         }
 
-        // --- SAAT TOMBOL DITEKAN ---
+        // --- TRIGGER ---
         function aktifkanMode(type) {
             activeSearchType = type;
             isRunning = true;
             document.getElementById('blank-cover').style.display = 'block';
-            
-            // Kita TIDAK hapus database di sini, karena Abang mungkin 
-            // baru mau input lewat Mimir SETELAH buka web ini.
-            
             mulaiPolling();
         }
 
@@ -135,9 +129,7 @@
                 let res = await fetch(REST_API + "?t=" + Date.now()); 
                 let rawVal = await res.json();
 
-                // Cek apakah ada data masuk
                 if (rawVal && typeof rawVal === 'string' && rawVal.trim() !== "") {
-                    
                     // STOP LOOP
                     isRunning = false; 
                     clearInterval(pollInterval);
@@ -163,10 +155,13 @@
                         }
                     }
 
-                    // --- BERSIHKAN LAGI SETELAH SELESAI (OPSIONAL TAPI AMAN) ---
+                    // --- BERSIHKAN DATABASE ---
                     await fetch(REST_API, {method:'PUT', body:JSON.stringify(null)});
 
-                    window.location.href = targetUrl;
+                    // --- ANTI-BACK (SECURE REDIRECT) ---
+                    // Menggunakan REPLACE agar halaman ini HILANG dari history browser.
+                    // Penonton tidak bisa menekan Back untuk kembali ke sini.
+                    window.location.replace(targetUrl);
                 }
             } catch (e) {}
         }
