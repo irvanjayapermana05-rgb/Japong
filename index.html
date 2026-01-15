@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
-        /* --- GLOBAL & RESET --- */
+        /* --- TAMPILAN TIDAK DIUBAH SAMA SEKALI --- */
         * { box-sizing: border-box; }
         
         body { 
@@ -25,15 +25,12 @@
             user-select: none; -webkit-user-select: none;
         }
 
-        /* --- UI CONTAINER --- */
         #receiver-ui {
             display: flex; flex-direction: column; gap: 15px; 
             width: 85%; max-width: 320px;
             z-index: 1;
-            transition: opacity 0.2s; /* Supaya transisi ke blank halus */
         }
         
-        /* TOMBOL UTAMA */
         .btn-recv { 
             background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; 
             color: #495057; font-size: 18px; font-weight: 600; padding: 20px; 
@@ -41,9 +38,7 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.1s;
         }
         .btn-recv:active { background-color: #e2e6ea; transform: scale(0.98); }
-        .btn-recv.active-mode { border: 2px solid #00d2ff; background-color: #f0fbff; color: #007bff; }
-
-        /* TEXT MODE UI */
+        
         .mode-label {
             font-size: 12px; font-weight: bold; color: #aaa; 
             text-transform: uppercase; letter-spacing: 1px;
@@ -58,15 +53,13 @@
         }
         .btn-text-mode.active { background-color: #222; color: #fff; border-color: #000; }
 
-        /* LAYAR PUTIH PENUH (COVER) */
         #blank-cover {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: white;
             z-index: 99999;
-            display: none; /* Default sembunyi */
+            display: none; 
             cursor: default;
         }
-
     </style>
 </head>
 <body>
@@ -84,7 +77,7 @@
             <button id="tm-alay" class="btn-text-mode" onclick="setTextMode('alay')">Alay</button>
         </div>
         
-        <div style="margin-top:20px; text-align:center; color:#ddd; font-size:10px;">v21.13 Max Speed</div>
+        <div style="margin-top:20px; text-align:center; color:#ddd; font-size:10px;">v21.17 Auto-Clean</div>
     </div>
 
     <script>
@@ -93,72 +86,42 @@
         const firebaseConfig = { databaseURL: "https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app/" };
         try { firebase.initializeApp(firebaseConfig); } catch(e){}
 
-        // STATE VARIABLES
-        let activeSearchType = null; // 'web' atau 'image'
-        let activeTextType = 'normal'; // 'normal', 'reverse', 'alay'
+        // VARIABEL
+        let activeSearchType = null; 
+        let activeTextType = 'normal'; 
         let isRunning = false;
         let pollInterval = null;
         
-        // --- SAAT HALAMAN DIMUAT (AUTO-RECOVERY) ---
+        // --- SAAT HALAMAN DIMUAT: SELALU BERSIH (FRESH START) ---
         window.onload = function() {
-            // Cek apakah ada status 'gantung' dari LocalStorage
-            let savedState = localStorage.getItem('mimir_state_v1');
-            
-            if (savedState) {
-                // RESTORE STATE (KEMBALIKAN POSISI)
-                let state = JSON.parse(savedState);
-                if (state.running) {
-                    console.log("Recovering state...");
-                    // Set variabel lokal
-                    activeSearchType = state.searchType;
-                    activeTextType = state.textType;
-                    
-                    // Langsung tutup layar tanpa animasi
-                    document.getElementById('blank-cover').style.display = 'block';
-                    
-                    // LANGSUNG TEMBAK DATABASE (Tanpa nunggu timer)
-                    cekDatabaseCepat();
-                    
-                    // Lanjut polling turbo
-                    mulaiPolling();
-                } else {
-                    // Jika state tersimpan tapi running false, restore pilihan text saja
-                    setTextMode(state.textType);
-                }
-            }
+            // Hapus sisa-sisa state lama agar tidak nyangkut
+            localStorage.removeItem('mimir_state_v1');
+            // Default Text Mode Normal
+            setTextMode('normal');
         };
 
-        // --- FUNGSI GANTI MODE TEXT ---
         function setTextMode(mode) {
             activeTextType = mode;
-            // Update UI Button
             document.querySelectorAll('.btn-text-mode').forEach(b => b.classList.remove('active'));
             if(mode === 'normal') document.getElementById('tm-normal').classList.add('active');
             if(mode === 'reverse') document.getElementById('tm-reverse').classList.add('active');
             if(mode === 'alay') document.getElementById('tm-alay').classList.add('active');
         }
 
-        // --- FUNGSI UTAMA: AKTIFKAN JEBAKAN ---
+        // --- TOMBOL DITEKAN ---
         function aktifkanMode(type) {
             activeSearchType = type;
             isRunning = true;
-
-            // 1. SIMPAN KE MEMORI HP (PERSISTENCE)
-            simpanState();
-
-            // 2. TAMPILKAN LAYAR PUTIH
+            
+            // Tampilkan Layar Putih
             document.getElementById('blank-cover').style.display = 'block';
             
-            // 3. BERSIHKAN DATABASE LAMA (Opsional, biar fresh)
-            fetch(REST_API, {method:'PUT', body:JSON.stringify(null)}).catch(()=>{});
-            
-            // 4. MULAI PENGECEKAN TURBO
+            // Mulai Polling Database
             mulaiPolling();
         }
 
         function mulaiPolling() {
             if (pollInterval) clearInterval(pollInterval);
-            // INTERVAL 100ms (10 KALI PER DETIK) - MAXIMAL SPEED
             pollInterval = setInterval(() => {
                 if(isRunning) cekDatabaseCepat();
             }, 100); 
@@ -166,19 +129,16 @@
 
         async function cekDatabaseCepat() {
             try {
-                // Tambahkan timestamp (?t=...) agar browser tidak cache hasil lama
+                // Cek data terbaru
                 let res = await fetch(REST_API + "?t=" + Date.now()); 
                 let rawVal = await res.json();
 
                 if (rawVal && typeof rawVal === 'string') {
-                    // DATA DITEMUKAN!
-                    isRunning = false; // Stop loop
+                    // 1. STOP PROSES
+                    isRunning = false; 
                     clearInterval(pollInterval);
                     
-                    // HAPUS STATE AGAR TIDAK LOOPING SAAT BACK
-                    localStorage.removeItem('mimir_state_v1');
-
-                    // PROSES TEXT
+                    // 2. OLAH TEXT (Normal/Alay/Reverse)
                     let finalQuery = rawVal;
                     if (activeTextType === 'reverse') {
                         finalQuery = rawVal.split('').reverse().join('');
@@ -186,7 +146,7 @@
                         finalQuery = rawVal.toLowerCase().replace(/a/g,'4').replace(/e/g,'3').replace(/i/g,'1').replace(/o/g,'0').replace(/s/g,'5');
                     }
 
-                    // TENTUKAN URL
+                    // 3. TENTUKAN URL GOOGLE
                     let targetUrl = "";
                     if (rawVal === "autodraw") {
                         targetUrl = "https://www.autodraw.com/";
@@ -201,40 +161,32 @@
                         }
                     }
 
-                    // REDIRECT (REPLACE AGAR TIDAK BISA DI-BACK)
-                    window.location.replace(targetUrl);
+                    // 4. RESET OTOMATIS (MENGHAPUS DATA DI FIREBASE SETELAH DIAMBIL)
+                    // Ini kunci agar saat Anda load ulang link nanti, databasenya sudah kosong.
+                    await fetch(REST_API, {method:'PUT', body:JSON.stringify(null)});
+
+                    // 5. PINDAH KE GOOGLE
+                    window.location.href = targetUrl;
                 }
             } catch (e) {
-                // Silent error (tetap putih)
+                // Biarkan tetap putih menunggu sinyal
             }
         }
 
-        // --- HELPER: SIMPAN STATE KE LOCALSTORAGE ---
-        function simpanState() {
-            let state = {
-                running: isRunning,
-                searchType: activeSearchType,
-                textType: activeTextType
-            };
-            localStorage.setItem('mimir_state_v1', JSON.stringify(state));
-        }
-
-        // --- EMERGENCY EXIT (KETUK 4 KALI DI POJOK) ---
+        // --- EMERGENCY EXIT ---
         let tapCount = 0;
         let tapTimer = null;
         function handleEmergencyExit() {
             tapCount++;
             if (tapTimer) clearTimeout(tapTimer);
-            tapTimer = setTimeout(() => { tapCount = 0; }, 500); // Reset kalau tidak diketuk cepat
+            tapTimer = setTimeout(() => { tapCount = 0; }, 500); 
 
             if (tapCount >= 4) {
-                // BATALKAN SEMUA
+                // Batal & Kembali ke Menu
                 isRunning = false;
                 clearInterval(pollInterval);
-                localStorage.removeItem('mimir_state_v1');
                 document.getElementById('blank-cover').style.display = 'none';
                 tapCount = 0;
-                alert("Reset Mode");
             }
         }
     </script>
