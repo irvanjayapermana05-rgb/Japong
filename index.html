@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
-        /* --- TAMPILAN TIDAK DIUBAH SAMA SEKALI --- */
+        /* --- TAMPILAN SAMA PERSIS (TIDAK ADA YANG BERUBAH) --- */
         * { box-sizing: border-box; }
         
         body { 
@@ -38,7 +38,8 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.1s;
         }
         .btn-recv:active { background-color: #e2e6ea; transform: scale(0.98); }
-        
+        .btn-recv.active-mode { border: 2px solid #00d2ff; background-color: #f0fbff; color: #007bff; }
+
         .mode-label {
             font-size: 12px; font-weight: bold; color: #aaa; 
             text-transform: uppercase; letter-spacing: 1px;
@@ -77,7 +78,7 @@
             <button id="tm-alay" class="btn-text-mode" onclick="setTextMode('alay')">Alay</button>
         </div>
         
-        <div style="margin-top:20px; text-align:center; color:#ddd; font-size:10px;">v21.17 Auto-Clean</div>
+        <div style="margin-top:20px; text-align:center; color:#ddd; font-size:10px;">v21.21 Reset On Open</div>
     </div>
 
     <script>
@@ -86,18 +87,20 @@
         const firebaseConfig = { databaseURL: "https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app/" };
         try { firebase.initializeApp(firebaseConfig); } catch(e){}
 
-        // VARIABEL
         let activeSearchType = null; 
         let activeTextType = 'normal'; 
         let isRunning = false;
         let pollInterval = null;
         
-        // --- SAAT HALAMAN DIMUAT: SELALU BERSIH (FRESH START) ---
+        // --- SAAT HALAMAN DIBUKA: RESET TOTAL (DATABASE & MEMORY) ---
         window.onload = function() {
-            // Hapus sisa-sisa state lama agar tidak nyangkut
+            // 1. Hapus Memory di HP
             localStorage.removeItem('mimir_state_v1');
-            // Default Text Mode Normal
             setTextMode('normal');
+
+            // 2. HAPUS DATA DI DATABASE FIREBASE (RESET FULL)
+            // Ini menjamin saat Abang buka web ini, data lama MUSNAH.
+            fetch(REST_API, {method:'PUT', body:JSON.stringify(null)}).catch(()=>{});
         };
 
         function setTextMode(mode) {
@@ -108,15 +111,15 @@
             if(mode === 'alay') document.getElementById('tm-alay').classList.add('active');
         }
 
-        // --- TOMBOL DITEKAN ---
+        // --- SAAT TOMBOL DITEKAN ---
         function aktifkanMode(type) {
             activeSearchType = type;
             isRunning = true;
-            
-            // Tampilkan Layar Putih
             document.getElementById('blank-cover').style.display = 'block';
             
-            // Mulai Polling Database
+            // Kita TIDAK hapus database di sini, karena Abang mungkin 
+            // baru mau input lewat Mimir SETELAH buka web ini.
+            
             mulaiPolling();
         }
 
@@ -129,16 +132,16 @@
 
         async function cekDatabaseCepat() {
             try {
-                // Cek data terbaru
                 let res = await fetch(REST_API + "?t=" + Date.now()); 
                 let rawVal = await res.json();
 
-                if (rawVal && typeof rawVal === 'string') {
-                    // 1. STOP PROSES
+                // Cek apakah ada data masuk
+                if (rawVal && typeof rawVal === 'string' && rawVal.trim() !== "") {
+                    
+                    // STOP LOOP
                     isRunning = false; 
                     clearInterval(pollInterval);
-                    
-                    // 2. OLAH TEXT (Normal/Alay/Reverse)
+
                     let finalQuery = rawVal;
                     if (activeTextType === 'reverse') {
                         finalQuery = rawVal.split('').reverse().join('');
@@ -146,7 +149,6 @@
                         finalQuery = rawVal.toLowerCase().replace(/a/g,'4').replace(/e/g,'3').replace(/i/g,'1').replace(/o/g,'0').replace(/s/g,'5');
                     }
 
-                    // 3. TENTUKAN URL GOOGLE
                     let targetUrl = "";
                     if (rawVal === "autodraw") {
                         targetUrl = "https://www.autodraw.com/";
@@ -161,19 +163,14 @@
                         }
                     }
 
-                    // 4. RESET OTOMATIS (MENGHAPUS DATA DI FIREBASE SETELAH DIAMBIL)
-                    // Ini kunci agar saat Anda load ulang link nanti, databasenya sudah kosong.
+                    // --- BERSIHKAN LAGI SETELAH SELESAI (OPSIONAL TAPI AMAN) ---
                     await fetch(REST_API, {method:'PUT', body:JSON.stringify(null)});
 
-                    // 5. PINDAH KE GOOGLE
                     window.location.href = targetUrl;
                 }
-            } catch (e) {
-                // Biarkan tetap putih menunggu sinyal
-            }
+            } catch (e) {}
         }
 
-        // --- EMERGENCY EXIT ---
         let tapCount = 0;
         let tapTimer = null;
         function handleEmergencyExit() {
@@ -182,7 +179,6 @@
             tapTimer = setTimeout(() => { tapCount = 0; }, 500); 
 
             if (tapCount >= 4) {
-                // Batal & Kembali ke Menu
                 isRunning = false;
                 clearInterval(pollInterval);
                 document.getElementById('blank-cover').style.display = 'none';
