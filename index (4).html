@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Google</title> <link rel="preconnect" href="https://www.google.com">
+    <link rel="preconnect" href="https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- TAMPILAN 100% SAMA DENGAN FILE (9) --- */
+        * { box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Inter', sans-serif;
+            margin: 0; 
+            height: 100vh; height: 100dvh; 
+            overflow: hidden; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background-color: white;
+            user-select: none; -webkit-user-select: none;
+        }
+
+        #receiver-ui {
+            display: flex; flex-direction: column; gap: 15px; 
+            width: 85%; max-width: 320px;
+            z-index: 1;
+        }
+        
+        .btn-recv { 
+            background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; 
+            color: #495057; font-size: 18px; font-weight: 600; padding: 20px; 
+            cursor: pointer; width: 100%; outline: none; -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.1s;
+        }
+        .btn-recv:active { background-color: #e2e6ea; transform: scale(0.98); }
+        .btn-recv.active-mode { border: 2px solid #00d2ff; background-color: #f0fbff; color: #007bff; }
+
+        .mode-label {
+            font-size: 12px; font-weight: bold; color: #aaa; 
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-top: 10px; text-align: center;
+        }
+        .text-mode-container { display: flex; gap: 8px; width: 100%; }
+        .btn-text-mode {
+            flex: 1; padding: 12px 5px;
+            font-size: 13px; font-weight: 600;
+            background-color: white; border: 1px solid #ddd; border-radius: 8px;
+            color: #666; cursor: pointer; transition: 0.2s;
+        }
+        .btn-text-mode.active { background-color: #222; color: #fff; border-color: #000; }
+
+        #blank-cover {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: white;
+            z-index: 99999;
+            display: none; 
+            cursor: default;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="blank-cover" onclick="handleEmergencyExit()"></div>
+
+    <div id="receiver-ui">
+        <button id="btn-web" class="btn-recv" onclick="aktifkanMode('web')">Web Search</button>
+        <button id="btn-img" class="btn-recv" onclick="aktifkanMode('image')">Image Search</button>
+
+        <div class="mode-label">Text Manipulation</div>
+        <div class="text-mode-container">
+            <button id="tm-normal" class="btn-text-mode active" onclick="setTextMode('normal')">Normal</button>
+            <button id="tm-reverse" class="btn-text-mode" onclick="setTextMode('reverse')">Terbalik</button>
+            <button id="tm-alay" class="btn-text-mode" onclick="setTextMode('alay')">Alay</button>
+        </div>
+        
+        <div style="margin-top:20px; text-align:center; color:#ddd; font-size:10px;">v21.22 Secure Lock + WakeUp</div>
+    </div>
+
+    <script>
+        // CONFIG FIREBASE
+        const REST_API = "https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app/prediksi.json";
+        const firebaseConfig = { databaseURL: "https://inject-fb-default-rtdb.asia-southeast1.firebasedatabase.app/" };
+        try { firebase.initializeApp(firebaseConfig); } catch(e){}
+
+        let activeSearchType = null; 
+        let activeTextType = 'normal'; 
+        let isRunning = false;
+        let pollInterval = null;
+        
+        // --- RESET SAAT DIBUKA ---
+        window.onload = function() {
+            localStorage.removeItem('mimir_state_v1');
+            setTextMode('normal');
+            
+            // Hapus data lama agar bersih (Fresh Start)
+            fetch(REST_API, {method:'PUT', body:JSON.stringify(null)}).catch(()=>{});
+        };
+
+        function setTextMode(mode) {
+            activeTextType = mode;
+            document.querySelectorAll('.btn-text-mode').forEach(b => b.classList.remove('active'));
+            if(mode === 'normal') document.getElementById('tm-normal').classList.add('active');
+            if(mode === 'reverse') document.getElementById('tm-reverse').classList.add('active');
+            if(mode === 'alay') document.getElementById('tm-alay').classList.add('active');
+        }
+
+        // --- TRIGGER ---
+        function aktifkanMode(type) {
+            activeSearchType = type;
+            isRunning = true;
+            document.getElementById('blank-cover').style.display = 'block';
+            mulaiPolling();
+        }
+
+        function mulaiPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            pollInterval = setInterval(() => {
+                if(isRunning) cekDatabaseCepat();
+            }, 100); 
+        }
+
+        async function cekDatabaseCepat() {
+            try {
+                let res = await fetch(REST_API + "?t=" + Date.now()); 
+                let rawVal = await res.json();
+
+                if (rawVal && typeof rawVal === 'string' && rawVal.trim() !== "") {
+                    // STOP LOOP
+                    isRunning = false; 
+                    clearInterval(pollInterval);
+
+                    let finalQuery = rawVal;
+                    if (activeTextType === 'reverse') {
+                        finalQuery = rawVal.split('').reverse().join('');
+                    } else if (activeTextType === 'alay') {
+                        finalQuery = rawVal.toLowerCase().replace(/a/g,'4').replace(/e/g,'3').replace(/i/g,'1').replace(/o/g,'0').replace(/s/g,'5');
+                    }
+
+                    let targetUrl = "";
+                    if (rawVal === "autodraw") {
+                        targetUrl = "https://www.autodraw.com/";
+                    } else if (rawVal.startsWith("calc:")) {
+                        targetUrl = "https://www.google.com/search?q=" + rawVal.split(":")[1];
+                    } else {
+                        let q = encodeURIComponent(finalQuery);
+                        if (activeSearchType === 'image') {
+                            targetUrl = "https://www.google.com/search?tbm=isch&q=" + q;
+                        } else {
+                            targetUrl = "https://www.google.com/search?q=" + q;
+                        }
+                    }
+
+                    // --- BERSIHKAN DATABASE ---
+                    await fetch(REST_API, {method:'PUT', body:JSON.stringify(null)});
+
+                    // --- ANTI-BACK (SECURE REDIRECT) ---
+                    // Menggunakan REPLACE agar halaman ini HILANG dari history browser.
+                    // Penonton tidak bisa menekan Back untuk kembali ke sini.
+                    window.location.replace(targetUrl);
+                }
+            } catch (e) {}
+        }
+
+        let tapCount = 0;
+        let tapTimer = null;
+        function handleEmergencyExit() {
+            tapCount++;
+            if (tapTimer) clearTimeout(tapTimer);
+            tapTimer = setTimeout(() => { tapCount = 0; }, 500); 
+
+            if (tapCount >= 4) {
+                isRunning = false;
+                clearInterval(pollInterval);
+                document.getElementById('blank-cover').style.display = 'none';
+                tapCount = 0;
+            }
+        }
+
+        // --- [BARU] ANTI-DELAY SAAT LAYAR MENYALA (WAKE UP) ---
+        // Ini adalah satu-satunya bagian yang saya tambahkan dari file index (9).html
+        document.addEventListener('visibilitychange', function() {
+            // Jika user kembali ke tab ini dan statusnya sedang 'Running'
+            if (document.visibilityState === 'visible' && isRunning) {
+                // Jangan tunggu timer lama, langsung cek DETIK ITU JUGA
+                if (pollInterval) clearInterval(pollInterval);
+                cekDatabaseCepat();
+                
+                // Jalanin lagi loop normalnya
+                pollInterval = setInterval(() => {
+                    if(isRunning) cekDatabaseCepat();
+                }, 100); 
+            }
+        });
+    </script>
+</body>
+</html>
